@@ -1,0 +1,82 @@
+{
+    "name": "rooberthh/php-sdk",
+    "description": "A framework for building SDKs in PHP.",
+    "type": "library",
+    "version": "1.0",
+    "keywords": [
+        "php",
+        "sdk"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Roberth Evaldsson",
+            "email": "evaldsson.roberth@gmail.com",
+            "role": "Developer"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/rooberthh/php-sdk/issues"
+    },
+    "funding": [],
+    "require": {
+        "php": "^8.3",
+        "ext-json": "*",
+        "ext-fileinfo": "*",
+        "crell/serde": "^1.0.1",
+        "league/object-mapper": "dev-main",
+        "nyholm/psr7": "^1.8.1",
+        "php-http/client-common": "^2.7.1",
+        "php-http/discovery": "^1.19.2",
+        "psr/http-client": "^1.0.3",
+        "psr/http-client-implementation": "*",
+        "psr/http-factory-implementation": "*",
+        "psr/http-message": "^2.0",
+        "ramsey/collection": "^2.0",
+        "symfony/http-client": "^7.0"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.13.7",
+        "pestphp/pest": "^3.5",
+        "php-http/mock-client": "^1.6",
+        "phpstan/phpstan": "^1.10.50",
+        "roave/security-advisories": "dev-latest"
+    },
+    "provide": {
+        "psr-discovery/http-client-implementations": "^1.0"
+    },
+    "suggest": {},
+    "autoload": {
+        "psr-4": {
+            "Rooberthh\\Sdk\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Rooberthh\\Sdk\\Tests\\": "tests/"
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "config": {
+        "allow-plugins": {
+            "php-http/discovery": true,
+            "pestphp/pest-plugin": true
+        },
+        "optimize-autoloader": true,
+        "sort-packages": true,
+        "classmap-authoritative": true
+    },
+    "scripts": {
+        "pint": [
+            "./vendor/bin/pint"
+        ],
+        "stan": [
+            "./vendor/bin/phpstan analyse --memory-limit=3g"
+        ]
+    },
+    "scripts-descriptions": {
+        "pint": "Run Laravel Pint on the codebase.",
+        "stan": "Run PhpStan on the codebase."
+    }
+}
