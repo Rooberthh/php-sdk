@@ -26,7 +26,7 @@ it('can setup swap the HTTP client', function () {
 
     expect($client->http)->toBeInstanceOf(PluginClient::class);
 
-    $client->client(new MockClient);
+    $client->client(new MockClient());
 
     expect($client->http)->toBeInstanceOf(MockClient::class);
 });

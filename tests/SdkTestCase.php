@@ -20,10 +20,11 @@ abstract class SdkTestCase extends BaseTestCase
 
     /**
      * @throws JsonException
+     * @param string $fixture
      */
     protected function createMockClient(string $fixture): ClientContract
     {
-        $mockClient = (new MockClient);
+        $mockClient = (new MockClient());
 
         $mockClient->addResponse(
             response: new Response(
@@ -44,7 +45,7 @@ abstract class SdkTestCase extends BaseTestCase
 
     protected function fixture(string $path): array
     {
-        $filename = __DIR__."/Fixtures/{$path}.json";
+        $filename = __DIR__ . "/Fixtures/{$path}.json";
 
         if (! file_exists(filename: $filename)) {
             throw new InvalidArgumentException(

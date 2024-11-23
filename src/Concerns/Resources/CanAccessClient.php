@@ -9,10 +9,12 @@ trait CanAccessClient
 {
     /**
      * @param  SerdeCommon  $serialize
+     * @param ClientContract $client
+     * @param SerdeCommon $serializer
      */
     public function __construct(
         protected readonly ClientContract $client,
-        protected readonly SerdeCommon $serializer = new SerdeCommon,
+        protected readonly SerdeCommon $serializer = new SerdeCommon(),
     ) {
         //
     }

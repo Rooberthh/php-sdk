@@ -9,6 +9,7 @@ interface ClientContract
 {
     /**
      * Setup client.
+     * @param array $plugins
      */
     public function setup(array $plugins): ClientContract;
 
@@ -19,6 +20,7 @@ interface ClientContract
 
     /**
      * Send a request.
+     * @param RequestInterface $request
      */
     public function send(RequestInterface $request): ResponseInterface;
 }
