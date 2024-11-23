@@ -9,24 +9,16 @@ interface ClientContract
 {
     /**
      * Setup client.
-     *
-     * @param  array  $plugins
-     * @return ClientContract
      */
     public function setup(array $plugins): ClientContract;
 
     /**
      * Return the url
-     *
-     * @return string
      */
     public function url(): string;
 
     /**
      * Send a request.
-     *
-     * @param  RequestInterface  $request
-     * @return ResponseInterface
      */
     public function send(RequestInterface $request): ResponseInterface;
 }

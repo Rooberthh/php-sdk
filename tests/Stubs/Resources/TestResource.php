@@ -10,8 +10,8 @@ use Rooberthh\Sdk\Tests\Stubs\DataObjects\TestDataObject;
 class TestResource
 {
     use CanAccessClient;
-    use CanCreateRequests;
     use CanCreateDataObjects;
+    use CanCreateRequests;
 
     public function list()
     {

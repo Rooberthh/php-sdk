@@ -8,13 +8,11 @@ use Rooberthh\Sdk\Contracts\ClientContract;
 trait CanAccessClient
 {
     /**
-     * @param ClientContract $client
-     * @param SerdeCommon    $serialize
-     * @param SerdeCommon $serializer
+     * @param  SerdeCommon  $serialize
      */
     public function __construct(
         protected readonly ClientContract $client,
-        protected readonly SerdeCommon $serializer = new SerdeCommon(),
+        protected readonly SerdeCommon $serializer = new SerdeCommon,
     ) {
         //
     }

@@ -15,7 +15,7 @@ abstract class Client implements ClientContract
     /**
      * The PSR-18 HTTP Client itself.
      */
-    public null|ClientInterface $http = null;
+    public ?ClientInterface $http = null;
 
     public function __construct(protected readonly string $url)
     {
@@ -49,7 +49,6 @@ abstract class Client implements ClientContract
 
     /**
      * Set the HTTP Client for the SDK.
-     * @param ClientInterface $client
      */
     public function client(ClientInterface $client): ClientContract
     {
@@ -59,9 +58,7 @@ abstract class Client implements ClientContract
     }
 
     /**
-     * @param  RequestInterface  $request
-     * @return ResponseInterface
-        *@throws ClientSetupException
+     * @throws ClientSetupException
      */
     public function send(RequestInterface $request): ResponseInterface
     {
