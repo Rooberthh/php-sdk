@@ -50,6 +50,7 @@ abstract class Client implements ClientContract
     /**
      * Set the HTTP Client for the SDK.
      * @param ClientInterface $client
+     * @return ClientContract
      */
     public function client(ClientInterface $client): ClientContract
     {
@@ -59,8 +60,8 @@ abstract class Client implements ClientContract
     }
 
     /**
-     * @throws ClientSetupException
      * @param RequestInterface $request
+     * @throws ClientSetupException
      */
     public function send(RequestInterface $request): ResponseInterface
     {

@@ -18,8 +18,6 @@ trait CanCreateRequests
 
     public function payload(string $payload): StreamInterface
     {
-        return Psr17FactoryDiscovery::findStreamFactory()->createStream(
-            content: $payload,
-        );
+        return Psr17FactoryDiscovery::findStreamFactory()->createStream($payload);
     }
 }

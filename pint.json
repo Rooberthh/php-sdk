@@ -4,8 +4,18 @@
         "phpdoc_add_missing_param_annotation": {
             "only_untyped": false
         },
+        "phpdoc_types_order": {
+            "null_adjustment": "always_first"
+        },
         "fully_qualified_strict_types": {
             "import_symbols": true
+        },
+        "phpdoc_order": {
+            "order": [
+                "param",
+                "throws",
+                "return"
+            ]
         }
     }
 }

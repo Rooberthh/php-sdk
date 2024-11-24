@@ -19,8 +19,8 @@ abstract class SdkTestCase extends BaseTestCase
     }
 
     /**
-     * @throws JsonException
      * @param string $fixture
+     * @throws JsonException
      */
     protected function createMockClient(string $fixture): ClientContract
     {
@@ -48,9 +48,7 @@ abstract class SdkTestCase extends BaseTestCase
         $filename = __DIR__ . "/Fixtures/{$path}.json";
 
         if (! file_exists(filename: $filename)) {
-            throw new InvalidArgumentException(
-                message: 'Failed to fetch fixture.',
-            );
+            throw new InvalidArgumentException('Failed to fetch fixture.');
         }
 
         return json_decode(
