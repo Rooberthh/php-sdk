@@ -3,16 +3,52 @@
 namespace Rooberthh\Sdk\Tests\Feature;
 
 use Rooberthh\Sdk\Tests\SdkTestCase;
+use Rooberthh\Sdk\Tests\Stubs\DataObjects\NestedDataObject;
+use Rooberthh\Sdk\Tests\Stubs\DataObjects\PriceObject;
 use Rooberthh\Sdk\Tests\Stubs\DataObjects\TestDataObject;
 
 uses(SdkTestCase::class);
 
-it('can send return an array of data-objects', function () {
+it('can return an array of data-objects', function () {
     $client = $this->createMockClient('list');
 
     $response = $client->tests()->list();
 
     foreach ($response as $data) {
-        expect($data)->toBeInstanceOf(TestDataObject::class);
+        expect($data)
+            ->toBeInstanceOf(TestDataObject::class)
+            ->toHaveProperties(
+                [
+                    'id',
+                    'name',
+                    'desc',
+                ],
+            );
+    }
+});
+
+it('can return an array of data-objects with nested data-objects', function () {
+    $client = $this->createMockClient('list');
+
+    $response = $client->tests()->listNested();
+
+    foreach ($response as $data) {
+        expect($data)->toBeInstanceOf(NestedDataObject::class)
+            ->toHaveProperties(
+                [
+                    'id',
+                    'name',
+                    'desc',
+                    'card_prices',
+                ],
+            )
+            ->and($data->card_prices)->toBeInstanceOf(PriceObject::class)
+            ->toHaveProperties(
+                [
+                    "cardmarket_price",
+                    "tcgplayer_price",
+                    "amazon_price",
+                ],
+            );
     }
 });
