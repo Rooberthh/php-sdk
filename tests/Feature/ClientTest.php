@@ -39,10 +39,10 @@ it('can return an array of data-objects with nested data-objects', function () {
                     'id',
                     'name',
                     'desc',
-                    'card_prices',
+                    'price',
                 ],
             )
-            ->and($data->card_prices)->toBeInstanceOf(PriceObject::class)
+            ->and($data->price)->toBeInstanceOf(PriceObject::class)
             ->toHaveProperties(
                 [
                     "cardmarket_price",
