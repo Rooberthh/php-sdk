@@ -5,13 +5,14 @@ namespace Rooberthh\Sdk\Concerns\Resources;
 use Http\Discovery\Psr17FactoryDiscovery;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\StreamInterface;
+use Rooberthh\HttpTools\Enums\Method;
 
 trait CanCreateRequests
 {
-    public function request($method, string $uri): RequestInterface
+    public function request(Method $method, string $uri): RequestInterface
     {
         return Psr17FactoryDiscovery::findRequestFactory()->createRequest(
-            method: $method,
+            method: $method->value,
             uri: "{$this->client->url()}{$uri}",
         );
     }

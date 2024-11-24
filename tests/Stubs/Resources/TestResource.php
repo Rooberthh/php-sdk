@@ -2,6 +2,7 @@
 
 namespace Rooberthh\Sdk\Tests\Stubs\Resources;
 
+use Rooberthh\HttpTools\Enums\Method;
 use Rooberthh\Sdk\Concerns\Resources\CanAccessClient;
 use Rooberthh\Sdk\Concerns\Resources\CanCreateRequests;
 use Rooberthh\Sdk\Tests\Stubs\DataObjects\NestedDataObject;
@@ -14,7 +15,7 @@ class TestResource
 
     public function list()
     {
-        $request = $this->request('GET', '/test');
+        $request = $this->request(Method::GET, '/test');
 
         $response = $this->client->send($request);
 
@@ -25,7 +26,7 @@ class TestResource
 
     public function listNested()
     {
-        $request = $this->request('GET', '/test');
+        $request = $this->request(Method::GET, '/test');
 
         $response = $this->client->send($request);
 
