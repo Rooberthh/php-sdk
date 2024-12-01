@@ -2,6 +2,7 @@
 
 namespace Rooberthh\Sdk\Contracts;
 
+use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 
@@ -23,4 +24,12 @@ interface ClientContract
      * @param RequestInterface $request
      */
     public function send(RequestInterface $request): ResponseInterface;
+
+    /**
+     * Set the http-client manually
+     *
+     * @param  ClientInterface  $client
+     * @return ClientContract
+     */
+    public function client(ClientInterface $client): ClientContract;
 }

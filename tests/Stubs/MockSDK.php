@@ -7,7 +7,7 @@ use Rooberthh\Sdk\Tests\Stubs\Resources\TestResource;
 
 class MockSDK extends Client
 {
-    public function tests()
+    public function tests(): TestResource
     {
         return new TestResource($this);
     }
