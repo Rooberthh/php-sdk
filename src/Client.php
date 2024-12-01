@@ -8,7 +8,7 @@ use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Rooberthh\Sdk\Contracts\ClientContract;
-use Rooberthh\Sdk\Exceptions\ClientSetupException;
+use Rooberthh\Sdk\Exceptions\SetupException;
 
 abstract class Client implements ClientContract
 {
@@ -61,12 +61,12 @@ abstract class Client implements ClientContract
 
     /**
      * @param RequestInterface $request
-     * @throws ClientSetupException
+     * @throws SetupException
      */
     public function send(RequestInterface $request): ResponseInterface
     {
         if (! $this->http instanceof ClientInterface) {
-            throw new ClientSetupException('HTTP client is not an PSR-compatible client');
+            throw new SetupException('HTTP client is not an PSR-compatible client');
         }
 
         return $this->http->sendRequest($request);
