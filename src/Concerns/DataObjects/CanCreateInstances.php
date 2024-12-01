@@ -17,9 +17,6 @@ trait CanCreateInstances
 
     public static function make(array $data): DataObjectContract
     {
-        return (new ObjectMapperUsingReflection())->hydrateObject(
-            className: __CLASS__,
-            payload: $data,
-        );
+        return self::create(__CLASS__, $data);
     }
 }

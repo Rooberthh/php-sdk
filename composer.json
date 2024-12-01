@@ -32,14 +32,13 @@
         "psr/http-factory-implementation": "*",
         "psr/http-message": "^2.0",
         "rooberthh/php-http-tools": "^0.1.1",
-        "symfony/http-client": "^7.0"
+        "symfony/http-client": "^7.2"
     },
     "require-dev": {
-        "laravel/pint": "^1.13.7",
+        "laravel/pint": "^1.18",
         "pestphp/pest": "^3.5",
         "php-http/mock-client": "^1.6",
-        "phpstan/phpstan": "^1.10.50",
-        "roave/security-advisories": "dev-latest"
+        "phpstan/phpstan": "^2.0"
     },
     "provide": {
         "psr-discovery/http-client-implementations": "^1.0"
