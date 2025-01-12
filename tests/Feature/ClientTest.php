@@ -2,6 +2,7 @@
 
 namespace Rooberthh\Sdk\Tests\Feature;
 
+use Rooberthh\HttpTools\Enums\StatusCode;
 use Rooberthh\Sdk\Tests\SdkTestCase;
 use Rooberthh\Sdk\Tests\Stubs\DataObjects\NestedDataObject;
 use Rooberthh\Sdk\Tests\Stubs\DataObjects\PriceObject;
@@ -51,4 +52,12 @@ it('can return an array of data-objects with nested data-objects', function () {
                 ],
             );
     }
+});
+
+it('can post a payload', function () {
+    $client = $this->createMockClient('list-store');
+
+    $response = $client->tests()->store(['test' => 'payload']);
+
+    expect($response->getStatusCode())->toBe(StatusCode::OK->value);
 });

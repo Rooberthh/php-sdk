@@ -34,4 +34,12 @@ class TestResource
             return NestedDataObject::make($data);
         }, json_decode($response->getBody()->getContents(), true));
     }
+
+    public function store($payload)
+    {
+        $request = $this->request(Method::POST, '/test')
+            ->withBody($this->payload(json_encode($payload)));
+
+        return $this->client->send($request);
+    }
 }
