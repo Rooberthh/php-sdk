@@ -2,8 +2,8 @@
 
 namespace Rooberthh\Sdk;
 
-use Http\Client\Common\PluginClient;
-use Http\Discovery\Psr18ClientDiscovery;
+use Http\Client\Common\Plugin\ErrorPlugin;
+use Http\Client\Common\Plugin\RetryPlugin;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -17,26 +17,22 @@ abstract class Client implements ClientContract
      */
     public ?ClientInterface $http = null;
 
-    public function __construct(protected readonly string $url)
+    public function __construct(protected readonly string $url, protected array $plugins = [])
     {
         //
     }
 
-    /**
-     * Set up the client using PSR-18 discovery, passing in plugins.
-     *
-     * @see https://docs.php-http.org/en/latest/plugins/introduction.html#install
-     *
-     * @param  array<int,Plugin>  $plugins
-     */
-    public function setup(array $plugins = []): ClientContract
+    public function withPlugins(array $plugins): ClientContract
     {
-        $this->http = new PluginClient(
-            client: Psr18ClientDiscovery::find(),
-            plugins: $plugins,
-        );
+        $this->plugins = array_merge($this->defaultPlugins(), $plugins);
+    }
 
-        return $this;
+    public function defaultPlugins(): array
+    {
+        return [
+            new RetryPlugin(),
+            new ErrorPlugin(),
+        ];
     }
 
     /**
