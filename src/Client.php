@@ -19,7 +19,6 @@ abstract class Client implements ClientContract
     public function __construct(
         protected readonly string $url,
         protected ClientInterface $client,
-        protected array $plugins = [],
     ) {
         //
     }
@@ -41,20 +40,13 @@ abstract class Client implements ClientContract
     {
         return new PluginClient(
             client: Psr18ClientDiscovery::find(),
-            plugins: $this->plugins($this->plugins),
+            plugins: $this->defaultPlugins(),
         );
     }
 
     public function url(): string
     {
         return rtrim($this->url, '/');
-    }
-
-    public function plugins(array $plugins = []): array
-    {
-        $this->plugins = array_merge($this->defaultPlugins(), $plugins);
-
-        return $this->plugins;
     }
 
     public function defaultPlugins(): array

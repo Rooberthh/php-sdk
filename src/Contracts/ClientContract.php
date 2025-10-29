@@ -9,8 +9,6 @@ use Psr\Http\Message\ResponseInterface;
 
 interface ClientContract
 {
-    public function plugins(array $plugins): array;
-
     public function defaultPlugins(): array;
 
     public function url(): string;
