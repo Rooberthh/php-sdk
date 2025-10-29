@@ -2,13 +2,14 @@
 
 namespace Rooberthh\Sdk\Contracts;
 
+use Http\Client\Common\PluginClient;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 
 interface ClientContract
 {
-    public function withPlugins(array $plugins): ClientContract;
+    public function plugins(array $plugins): array;
 
     public function defaultPlugins(): array;
 
@@ -16,5 +17,7 @@ interface ClientContract
 
     public function send(RequestInterface $request): ResponseInterface;
 
-    public function client(ClientInterface $client): ClientContract;
+    public function setClient(ClientInterface $client): ClientContract;
+
+    public function client(): PluginClient;
 }

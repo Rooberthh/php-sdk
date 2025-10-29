@@ -4,6 +4,8 @@ namespace Rooberthh\Sdk;
 
 use Http\Client\Common\Plugin\ErrorPlugin;
 use Http\Client\Common\Plugin\RetryPlugin;
+use Http\Client\Common\PluginClient;
+use Http\Discovery\Psr18ClientDiscovery;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -12,19 +14,47 @@ use Rooberthh\Sdk\Exceptions\SetupException;
 
 abstract class Client implements ClientContract
 {
-    /**
-     * The PSR-18 HTTP Client itself.
-     */
     public ?ClientInterface $http = null;
 
-    public function __construct(protected readonly string $url, protected array $plugins = [])
-    {
+    public function __construct(
+        protected readonly string $url,
+        protected ClientInterface $client,
+        protected array $plugins = [],
+    ) {
         //
     }
 
-    public function withPlugins(array $plugins): ClientContract
+    /**
+     * @throws SetupException
+     * @param RequestInterface $request
+     */
+    public function send(RequestInterface $request): ResponseInterface
+    {
+        if (! $this->client instanceof ClientInterface) {
+            throw new SetupException('HTTP client is not an PSR-compatible client');
+        }
+
+        return $this->client->sendRequest($request);
+    }
+
+    public function client(): PluginClient
+    {
+        return new PluginClient(
+            client: Psr18ClientDiscovery::find(),
+            plugins: $this->plugins($this->plugins),
+        );
+    }
+
+    public function url(): string
+    {
+        return rtrim($this->url, '/');
+    }
+
+    public function plugins(array $plugins = []): array
     {
         $this->plugins = array_merge($this->defaultPlugins(), $plugins);
+
+        return $this->plugins;
     }
 
     public function defaultPlugins(): array
@@ -35,36 +65,10 @@ abstract class Client implements ClientContract
         ];
     }
 
-    /**
-     * Return the URL for the API.
-     */
-    public function url(): string
+    public function setClient(ClientInterface $client): ClientContract
     {
-        return $this->url;
-    }
-
-    /**
-     * Set the HTTP Client for the SDK.
-     * @param ClientInterface $client
-     * @return ClientContract
-     */
-    public function client(ClientInterface $client): ClientContract
-    {
-        $this->http = $client;
+        $this->client = $client;
 
         return $this;
-    }
-
-    /**
-     * @param RequestInterface $request
-     * @throws SetupException
-     */
-    public function send(RequestInterface $request): ResponseInterface
-    {
-        if (! $this->http instanceof ClientInterface) {
-            throw new SetupException('HTTP client is not an PSR-compatible client');
-        }
-
-        return $this->http->sendRequest($request);
     }
 }

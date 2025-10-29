@@ -11,9 +11,11 @@ trait CanCreateRequests
 {
     public function request(Method $method, string $uri): RequestInterface
     {
+        $uri = ltrim($uri, '/');
+
         return Psr17FactoryDiscovery::findRequestFactory()->createRequest(
             method: $method->value,
-            uri: "{$this->client->url()}{$uri}",
+            uri: "{$this->client->url()}/{$uri}",
         );
     }
 

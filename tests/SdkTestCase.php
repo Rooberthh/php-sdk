@@ -15,6 +15,7 @@ abstract class SdkTestCase extends BaseTestCase
     {
         return new MockSDK(
             url: 'https://api.mock.com',
+            client: new MockClient(),
         );
     }
 
@@ -38,9 +39,8 @@ abstract class SdkTestCase extends BaseTestCase
 
         return (new MockSDK(
             url: 'https://api.mock.com',
-        ))->client(
             client: $mockClient,
-        );
+        ));
     }
 
     protected function fixture(string $path): array

@@ -1,7 +1,8 @@
 <?php
 
+use Http\Client\Common\Plugin\AuthenticationPlugin;
 use Http\Client\Common\PluginClient;
-use Http\Mock\Client as MockClient;
+use Http\Message\Authentication\Bearer;
 use Rooberthh\Sdk\Contracts\ClientContract;
 use Rooberthh\Sdk\Tests\SdkTestCase;
 
@@ -14,19 +15,20 @@ it('can create a client', function () {
 it('can setup the HTTP client', function () {
     $client = $this->createClient();
 
-    expect($client->http)->toBeNull();
-
-    $client = $client->setup();
-
-    expect($client->http)->toBeInstanceOf(PluginClient::class);
+    expect($client->client())->toBeInstanceOf(PluginClient::class);
 });
 
-it('can setup swap the HTTP client', function () {
-    $client = $this->createClient()->setup();
+it('can change the plugins', function () {
+    $client = $this->createClient();
 
-    expect($client->http)->toBeInstanceOf(PluginClient::class);
+    $defaultPlugins = $client->plugins();
 
-    $client->client(new MockClient());
+    expect(array_map('get_class', $client->plugins()))->toBe(array_map('get_class', $client->defaultPlugins()));
 
-    expect($client->http)->toBeInstanceOf(MockClient::class);
+    $bearerPlugin = new AuthenticationPlugin(new Bearer('my-bearer'));
+
+    $plugins = $client->plugins([$bearerPlugin]);
+
+
+    expect($plugins)->toContain($bearerPlugin);
 });
