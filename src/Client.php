@@ -2,13 +2,16 @@
 
 namespace Rooberthh\Sdk;
 
+use Http\Client\Common\Plugin\AuthenticationPlugin;
 use Http\Client\Common\Plugin\ErrorPlugin;
 use Http\Client\Common\Plugin\RetryPlugin;
 use Http\Client\Common\PluginClient;
 use Http\Discovery\Psr18ClientDiscovery;
+use Http\Message\Authentication\Bearer;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Rooberthh\Sdk\Contracts\BearerTokenAuthenticationContract;
 use Rooberthh\Sdk\Contracts\ClientContract;
 use Rooberthh\Sdk\Exceptions\SetupException;
 
@@ -25,7 +28,6 @@ abstract class Client implements ClientContract
 
     /**
      * @throws SetupException
-     * @param RequestInterface $request
      */
     public function send(RequestInterface $request): ResponseInterface
     {
@@ -51,10 +53,18 @@ abstract class Client implements ClientContract
 
     public function defaultPlugins(): array
     {
-        return [
-            new RetryPlugin(),
-            new ErrorPlugin(),
+        $defaultPlugins = [
+            new ErrorPlugin,
+            new RetryPlugin,
         ];
+
+        if ($this instanceof BearerTokenAuthenticationContract) {
+            $defaultPlugins[] = new AuthenticationPlugin(
+                authentication: new Bearer($this->token())
+            );
+        }
+
+        return $defaultPlugins;
     }
 
     public function setClient(ClientInterface $client): ClientContract
