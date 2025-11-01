@@ -76,7 +76,7 @@ abstract class Client implements ClientContract
     public function defaultHeaders(): array
     {
         return [
-            'accept' => 'application/json',
+            'Accept' => 'application/json',
             'Content-Type' => 'application/json',
         ];
     }
