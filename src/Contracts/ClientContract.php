@@ -11,6 +11,8 @@ interface ClientContract
 {
     public function defaultPlugins(): array;
 
+    public function defaultHeaders(): array;
+
     public function url(): string;
 
     public function send(RequestInterface $request): ResponseInterface;
