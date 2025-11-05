@@ -212,7 +212,7 @@ do {
 
 // Step 2: Get installation path
 do {
-    $installPath = prompt('Enter the path relative to current directory (e.g., generated/myapi)', 'generated/' . strtolower($sdkName));
+    $installPath = prompt('Enter the path relative to current directory (e.g., sdks/myapi)', 'php-sdk/' . strtolower($sdkName));
 
     if (empty($installPath)) {
         echo "Error: Path cannot be empty.\n";
