@@ -1,0 +1,304 @@
+#!/usr/bin/env php
+<?php
+
+/**
+ * SDK Generator Script
+ *
+ * Generates a new SDK with authentication support and sample User resource.
+ * Run with: composer generate-sdk
+ * @param string $question
+ * @param string $default
+ */
+
+function prompt(string $question, string $default = ''): string
+{
+    $defaultText = $default ? " [$default]" : '';
+    echo "$question$defaultText: ";
+    $input = trim(fgets(STDIN));
+
+    return $input === '' && $default !== '' ? $default : $input;
+}
+
+function confirm(string $question): bool
+{
+    $answer = strtolower(prompt("$question (yes/no)", 'yes'));
+
+    return in_array($answer, ['yes', 'y', 'true', '1']);
+}
+
+function selectOption(string $question, array $options): string
+{
+    echo "$question\n";
+    foreach ($options as $key => $label) {
+        echo "  [$key] $label\n";
+    }
+
+    do {
+        $selection = prompt('Select an option', array_key_first($options));
+
+        if (isset($options[$selection])) {
+            return $selection;
+        }
+
+        echo "Error: Invalid option. Please select from the available options.\n";
+    } while (true);
+}
+
+function validateSdkName(string $name): bool
+{
+    return preg_match('/^[A-Za-z][A-Za-z0-9]*$/', $name);
+}
+
+function validatePath(string $path): bool
+{
+    // Check if path is relative (not starting with /)
+    return !str_starts_with($path, '/');
+}
+
+function generateNamespace(string $sdkName): string
+{
+    return ucfirst($sdkName);
+}
+
+function ensureDirectory(string $path): void
+{
+    if (!is_dir($path)) {
+        mkdir($path, 0755, true);
+        echo "Created directory: $path\n";
+    }
+}
+
+function writeFile(string $path, string $content): void
+{
+    file_put_contents($path, $content);
+    echo "Generated: $path\n";
+}
+
+function generateClientClass(string $namespace, string $className, ?string $authType): string
+{
+    $authImplements = $authType ? ' implements AuthenticationContract' : '';
+    $authUse = $authType ? "use Rooberthh\\Sdk\\Contracts\\AuthenticationContract;\n" : '';
+    $authPluginImport = '';
+    $authMethod = '';
+
+    if ($authType === 'bearer') {
+        $authPluginImport = "use Http\\Client\\Common\\Plugin\\AuthenticationPlugin;\nuse Http\\Message\\Authentication\\Bearer;\n";
+        $authMethod = "
+    public function authentication(): AuthenticationPlugin
+    {
+        return new AuthenticationPlugin(new Bearer('my-api-token'));
+    }
+";
+    } elseif ($authType === 'basic') {
+        $authPluginImport = "use Http\\Client\\Common\\Plugin\\AuthenticationPlugin;\nuse Http\\Message\\Authentication\\BasicAuth;\n";
+        $authMethod = "
+    public function authentication(): AuthenticationPlugin
+    {
+        return new AuthenticationPlugin(new BasicAuth('username', 'password'));
+    }
+";
+    }
+
+    return <<<PHP
+<?php
+
+declare(strict_types=1);
+
+namespace {$namespace};
+
+use Rooberthh\Sdk\Client;
+{$authUse}use {$namespace}\Resources\UserResource;
+{$authPluginImport}
+class {$className} extends Client{$authImplements}
+{
+    public function users(): UserResource
+    {
+        return new UserResource(\$this);
+    }
+{$authMethod}}
+
+PHP;
+}
+
+function generateResourceClass(string $namespace, string $resourceName, string $dataObjectName): string
+{
+    return <<<PHP
+<?php
+
+declare(strict_types=1);
+
+namespace {$namespace}\Resources;
+
+use Rooberthh\Sdk\Concerns\Resources\CanAccessClient;
+use Rooberthh\Sdk\Concerns\Resources\CanCreateRequests;
+use Rooberthh\HttpTools\Enums\Method;
+use {$namespace}\DataObjects\\{$dataObjectName};
+
+class {$resourceName}
+{
+    use CanAccessClient;
+    use CanCreateRequests;
+
+    /**
+     * Fetch a single user by ID.
+     *
+     * @param int \$id The user ID
+     * @return {$dataObjectName}
+     */
+    public function show(int \$id): {$dataObjectName}
+    {
+        \$request = \$this->request(Method::GET, "/users/{\$id}");
+        \$response = \$this->client->send(\$request);
+
+        \$data = json_decode(\$response->getBody()->getContents(), true);
+
+        return {$dataObjectName}::make(\$data);
+    }
+}
+
+PHP;
+}
+
+function generateDataObjectClass(string $namespace, string $className): string
+{
+    return <<<PHP
+<?php
+
+declare(strict_types=1);
+
+namespace {$namespace}\DataObjects;
+
+use Rooberthh\Sdk\Concerns\DataObjects\CanCreateInstances;
+use Rooberthh\Sdk\Contracts\DataObjectContract;
+
+readonly class {$className} implements DataObjectContract
+{
+    use CanCreateInstances;
+
+    public function __construct(
+        public int \$id,
+        public string \$name,
+        public string \$email,
+    ) {
+    }
+}
+
+PHP;
+}
+
+// Main execution
+echo "\n";
+echo "========================================\n";
+echo "     SDK Generator                      \n";
+echo "========================================\n";
+echo "\n";
+
+// Step 1: Get SDK name
+do {
+    $sdkName = prompt('Enter the SDK name (e.g., MyApi, GitHub, Stripe)');
+
+    if (empty($sdkName)) {
+        echo "Error: SDK name cannot be empty.\n";
+        continue;
+    }
+
+    if (!validateSdkName($sdkName)) {
+        echo "Error: SDK name must start with a letter and contain only letters and numbers.\n";
+        continue;
+    }
+
+    break;
+} while (true);
+
+// Step 2: Get installation path
+do {
+    $installPath = prompt('Enter the path relative to current directory (e.g., generated/myapi)', 'generated/' . strtolower($sdkName));
+
+    if (empty($installPath)) {
+        echo "Error: Path cannot be empty.\n";
+        continue;
+    }
+
+    if (!validatePath($installPath)) {
+        echo "Error: Path must be relative (not starting with /).\n";
+        continue;
+    }
+
+    break;
+} while (true);
+
+// Step 3: Ask about authentication
+$useAuth = confirm('Do you want to use authentication?');
+
+$authType = null;
+if ($useAuth) {
+    echo "\n";
+    $authType = selectOption('Which authentication type would you like to use?', [
+        'bearer' => 'Bearer Token',
+        'basic' => 'Basic Authentication',
+    ]);
+}
+
+// Generate namespace and class names
+$namespace = generateNamespace($sdkName);
+$clientClassName = "{$sdkName}Client";
+
+$authLabel = 'None';
+if ($authType === 'bearer') {
+    $authLabel = 'Bearer Token';
+} elseif ($authType === 'basic') {
+    $authLabel = 'Basic Authentication';
+}
+
+echo "\n";
+echo "Configuration:\n";
+echo "  SDK Name: $sdkName\n";
+echo "  Namespace: $namespace\n";
+echo "  Path: $installPath\n";
+echo "  Authentication: $authLabel\n";
+echo "\n";
+
+$proceed = confirm('Proceed with generation?');
+
+if (!$proceed) {
+    echo "Generation cancelled.\n";
+    exit(0);
+}
+
+echo "\n";
+echo "Generating SDK...\n";
+echo "\n";
+
+// Create directory structure
+$basePath = getcwd() . '/' . $installPath;
+ensureDirectory($basePath);
+ensureDirectory($basePath . '/Resources');
+ensureDirectory($basePath . '/DataObjects');
+
+// Generate Client class
+$clientContent = generateClientClass($namespace, $clientClassName, $authType);
+writeFile($basePath . '/' . $clientClassName . '.php', $clientContent);
+
+// Generate UserResource class
+$resourceContent = generateResourceClass($namespace, 'UserResource', 'UserDataObject');
+writeFile($basePath . '/Resources/UserResource.php', $resourceContent);
+
+// Generate UserDataObject class
+$dataObjectContent = generateDataObjectClass($namespace, 'UserDataObject');
+writeFile($basePath . '/DataObjects/UserDataObject.php', $dataObjectContent);
+
+echo "\n";
+echo "========================================\n";
+echo "  SDK generated successfully!          \n";
+echo "========================================\n";
+echo "\n";
+echo "Generated files:\n";
+echo "  - {$installPath}/{$clientClassName}.php\n";
+echo "  - {$installPath}/Resources/UserResource.php\n";
+echo "  - {$installPath}/DataObjects/UserDataObject.php\n";
+echo "\n";
+echo "Usage example:\n";
+echo "  \$client = new {$namespace}\\{$clientClassName}('https://api.example.com', \$httpClient);\n";
+echo "  \$user = \$client->users()->show(1);\n";
+echo "  echo \$user->name;\n";
+echo "\n";

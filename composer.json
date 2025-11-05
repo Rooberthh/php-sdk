@@ -3,6 +3,9 @@
     "description": "A framework for building SDKs in PHP.",
     "type": "library",
     "version": "1.0",
+    "bin": [
+        "bin/php-sdk-generate"
+    ],
     "keywords": [
         "php",
         "sdk"
@@ -66,6 +69,9 @@
         "classmap-authoritative": true
     },
     "scripts": {
+        "generate-sdk": [
+            "php bin/php-sdk-generate"
+        ],
         "pint": [
             "./vendor/bin/pint"
         ],
@@ -74,6 +80,7 @@
         ]
     },
     "scripts-descriptions": {
+        "generate-sdk": "Generate a new SDK with authentication and sample resource.",
         "pint": "Run Laravel Pint on the codebase.",
         "stan": "Run PhpStan on the codebase."
     }
