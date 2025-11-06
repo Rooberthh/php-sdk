@@ -3,7 +3,6 @@
 namespace Rooberthh\Sdk\Concerns\Resources;
 
 use Http\Discovery\Psr17FactoryDiscovery;
-use Nyholm\Psr7\Uri;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\StreamInterface;
 use Rooberthh\HttpTools\Enums\Method;
@@ -34,7 +33,7 @@ trait CanCreateRequests
 
         return $request->withUri(
             uri: $uri,
-            preserveHost: true
+            preserveHost: true,
         );
     }
 

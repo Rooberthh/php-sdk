@@ -22,7 +22,7 @@ class TestResource
             $request,
             [
                 Filter::make('name', 'asc'),
-            ]
+            ],
         );
 
         $response = $this->client->send($request);
