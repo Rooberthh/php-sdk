@@ -7,7 +7,7 @@ namespace Rooberthh\Sdk\Tests\Stubs\Resources;
 use Rooberthh\HttpTools\Enums\Method;
 use Rooberthh\Sdk\Concerns\Resources\CanAccessClient;
 use Rooberthh\Sdk\Concerns\Resources\CanCreateRequests;
-use Rooberthh\Sdk\Filter;
+use Rooberthh\Sdk\FilterBuilder;
 use Rooberthh\Sdk\Tests\Stubs\DataObjects\NestedDataObject;
 use Rooberthh\Sdk\Tests\Stubs\DataObjects\TestDataObject;
 
@@ -18,14 +18,9 @@ class TestResource
 
     public function list()
     {
-        $request = $this->request(Method::GET, '/test');
-
-        $this->applyFilters(
-            $request,
-            [
-                Filter::make('name', 'asc'),
-            ],
-        );
+        $request = FilterBuilder::for($this->request(Method::GET, '/test'))
+            ->where('name', 'asc')
+            ->apply();
 
         $response = $this->client->send($request);
 
