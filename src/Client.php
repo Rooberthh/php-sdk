@@ -29,15 +29,10 @@ abstract class Client implements ClientContract
 
     /**
      * @param  RequestInterface  $request
-     * @throws SetupException
      * @return ResponseInterface
      */
     public function send(RequestInterface $request): ResponseInterface
     {
-        if (!$this->client instanceof ClientInterface) {
-            throw new SetupException('HTTP client is not an PSR-compatible client');
-        }
-
         return $this->client->sendRequest($request);
     }
 
