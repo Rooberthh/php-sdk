@@ -27,8 +27,8 @@ class FilterBuilder
      *   ->where('name', 'john')
      *   ->where('filter[status]', 'active')
      *   ->where('price_gte', 100)
-     * @param string $key
-     * @param mixed $value
+     * @param  string  $key
+     * @param  mixed   $value
      */
     public function where(string $key, mixed $value): self
     {
@@ -39,8 +39,8 @@ class FilterBuilder
 
     /**
      * Conditionally apply filters.
-     * @param mixed $condition
-     * @param callable $callback
+     * @param  mixed     $condition
+     * @param  callable  $callback
      */
     public function when(mixed $condition, callable $callback): self
     {
