@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Rooberthh\Sdk\Contracts;
 
 use Http\Client\Common\PluginClient;

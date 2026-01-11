@@ -1,6 +1,7 @@
 {
     "preset": "per",
     "rules": {
+        "declare_strict_types": true,
         "phpdoc_add_missing_param_annotation": {
             "only_untyped": false
         },

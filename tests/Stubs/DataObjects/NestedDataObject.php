@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Rooberthh\Sdk\Tests\Stubs\DataObjects;
 
 use League\ObjectMapper\MapFrom;

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Rooberthh\Sdk\Tests\Stubs\Resources;
 
 use Rooberthh\HttpTools\Enums\Method;

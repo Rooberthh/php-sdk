@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Rooberthh\Sdk;
 
 use Http\Client\Common\Plugin\ErrorPlugin;
@@ -26,12 +28,13 @@ abstract class Client implements ClientContract
     }
 
     /**
-     * @param RequestInterface $request
+     * @param  RequestInterface  $request
      * @throws SetupException
+     * @return ResponseInterface
      */
     public function send(RequestInterface $request): ResponseInterface
     {
-        if (! $this->client instanceof ClientInterface) {
+        if (!$this->client instanceof ClientInterface) {
             throw new SetupException('HTTP client is not an PSR-compatible client');
         }
 
@@ -62,7 +65,7 @@ abstract class Client implements ClientContract
             $defaultPlugins[] = $this->authentication();
         }
 
-        if (! empty($this->defaultHeaders())) {
+        if (!empty($this->defaultHeaders())) {
             $defaultPlugins[] = new HeaderAppendPlugin($this->defaultHeaders());
         }
 
@@ -72,7 +75,7 @@ abstract class Client implements ClientContract
     public function defaultHeaders(): array
     {
         return [
-            'Accept' => 'application/json',
+            'Accept'       => 'application/json',
             'Content-Type' => 'application/json',
         ];
     }

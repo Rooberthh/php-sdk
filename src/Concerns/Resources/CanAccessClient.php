@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Rooberthh\Sdk\Concerns\Resources;
 
 use Rooberthh\Sdk\Contracts\ClientContract;

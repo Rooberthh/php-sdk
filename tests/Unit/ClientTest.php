@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Http\Client\Common\PluginClient;
 use Rooberthh\Sdk\Contracts\ClientContract;
 use Rooberthh\Sdk\Tests\SdkTestCase;
