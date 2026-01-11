@@ -100,6 +100,7 @@ namespace MyApi\Resources;
 
 use Rooberthh\Sdk\Concerns\Resources\CanAccessClient;
 use Rooberthh\Sdk\Concerns\Resources\CanCreateRequests;
+use Rooberthh\Sdk\FilterBuilder;
 use Rooberthh\HttpTools\Enums\Method;
 use MyApi\DataObjects\UserDataObject;
 
@@ -107,19 +108,17 @@ class UserResource
 {
     use CanAccessClient;
     use CanCreateRequests;
-    
+
     public function list(): array
     {
-        $request = $this->request(Method::GET, '/users');
-        
-        // Adds query parameters using Filter objects
-        $request = $this->applyFilters($request, [
-            Filter::make('sort', 'name'),
-            Filter::make('order', 'asc'),
-            Filter::make('limit', '10'),
-        ]);
+        // Use FilterBuilder for fluent query parameter construction
+        $request = FilterBuilder::for($this->request(Method::GET, '/users'))
+            ->where('sort', 'name')
+            ->where('order', 'asc')
+            ->where('limit', 10)
+            ->apply();
         // Results in: /users?sort=name&order=asc&limit=10
-        
+
         $response = $this->client->send($request);
 
         $data = json_decode($response->getBody()->getContents(), true);
@@ -170,6 +169,32 @@ class UserResource
 }
 ```
 
+### FilterBuilder
+
+The `FilterBuilder` provides a fluent interface for adding query parameters to requests:
+
+```php
+use Rooberthh\Sdk\FilterBuilder;
+
+// Basic usage
+$request = FilterBuilder::for($this->request(Method::GET, '/users'))
+    ->where('status', 'active')
+    ->where('page', 1)
+    ->apply();
+
+// Conditional filters
+$request = FilterBuilder::for($this->request(Method::GET, '/users'))
+    ->where('status', 'active')
+    ->when($search, fn($builder) => $builder->where('q', $search))
+    ->apply();
+
+// The key format is up to you - use whatever your API expects
+$request = FilterBuilder::for($this->request(Method::GET, '/products'))
+    ->where('filter[price][gte]', 100)  // Nested bracket notation
+    ->where('price_lte', 500)            // Underscore notation
+    ->apply();
+```
+
 ## Advanced Usage
 
 ### Custom headers
@@ -189,10 +214,12 @@ class MyApiClient extends Client implements AuthenticationContract
 }
 ```
 
+## Special Thanks
+
+This project would not have been possible without the incredible work of the open-source community.
+
+A huge thank you to [Steve McDougall](https://github.com/JustSteveKing) whose work heavily inspired the architecture and patterns used in this SDK. The foundation and approach taken here are directly influenced by his contributions to the PHP ecosystem.
+
 ## License
 
 MIT License
-
-## Contributing
-
-Contributions are welcome! Please submit pull requests or open issues on GitHub.
