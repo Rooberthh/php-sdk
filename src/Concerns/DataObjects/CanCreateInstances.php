@@ -9,7 +9,7 @@ use Rooberthh\Sdk\Contracts\DataObjectContract;
 
 trait CanCreateInstances
 {
-    public static function create(string $class, array $payload): DataObjectContract
+    public static function create(string $class, array $payload): self
     {
         return (new ObjectMapperUsingReflection())->hydrateObject(
             className: $class,
@@ -17,7 +17,7 @@ trait CanCreateInstances
         );
     }
 
-    public static function make(array $data): DataObjectContract
+    public static function make(array $data): self
     {
         return self::create(__CLASS__, $data);
     }
