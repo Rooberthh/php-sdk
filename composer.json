@@ -24,9 +24,9 @@
     "funding": [],
     "require": {
         "php": "^8.3",
+        "cuyz/valinor": "^2.6",
         "ext-fileinfo": "*",
         "ext-json": "*",
-        "league/object-mapper": "dev-main",
         "nyholm/psr7": "^1.8.1",
         "php-http/client-common": "^2.7.1",
         "php-http/discovery": "^1.19.2",

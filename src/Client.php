@@ -14,7 +14,6 @@ use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Rooberthh\Sdk\Contracts\AuthenticationContract;
 use Rooberthh\Sdk\Contracts\ClientContract;
-use Rooberthh\Sdk\Exceptions\SetupException;
 
 abstract class Client implements ClientContract
 {

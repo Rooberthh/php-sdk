@@ -12,9 +12,9 @@ readonly class PriceObject implements DataObjectContract
     use CanCreateInstances;
 
     public function __construct(
-        public string $cardmarket_price,
-        public string $tcgplayer_price,
-        public string $amazon_price,
+        public string $cardmarketPrice,
+        public string $tcgplayerPrice,
+        public string $amazonPrice,
     ) {
         //
     }

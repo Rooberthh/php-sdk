@@ -40,10 +40,27 @@ class TestResource
         }, json_decode($response->getBody()->getContents(), true));
     }
 
-    public function store($payload)
+    public function store(object $payload)
     {
         $request = $this->request(Method::POST, '/test')
-            ->withBody($this->payload(json_encode($payload)));
+            ->withBody($this->payload($payload));
+
+        return $this->client->send($request);
+    }
+
+    /** @param array<mixed, mixed> $data */
+    public function storeJson(array $data)
+    {
+        $request = $this->request(Method::POST, '/test')
+            ->withBody($this->json($data));
+
+        return $this->client->send($request);
+    }
+
+    public function storeRaw(string $body)
+    {
+        $request = $this->request(Method::POST, '/test')
+            ->withBody($this->body($body));
 
         return $this->client->send($request);
     }

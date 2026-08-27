@@ -42,15 +42,15 @@ it('can return an array of data-objects with nested data-objects', function () {
                     'id',
                     'name',
                     'desc',
-                    'price',
+                    'cardPrices',
                 ],
             )
-            ->and($data->price)->toBeInstanceOf(PriceObject::class)
+            ->and($data->cardPrices)->toBeInstanceOf(PriceObject::class)
             ->toHaveProperties(
                 [
-                    "cardmarket_price",
-                    "tcgplayer_price",
-                    "amazon_price",
+                    'cardmarketPrice',
+                    'tcgplayerPrice',
+                    'amazonPrice',
                 ],
             );
     }
@@ -59,7 +59,7 @@ it('can return an array of data-objects with nested data-objects', function () {
 it('can post a payload', function () {
     $client = $this->createMockClient('list-store');
 
-    $response = $client->tests()->store(['test' => 'payload']);
+    $response = $client->tests()->storeJson(['test' => 'payload']);
 
     expect($response->getStatusCode())->toBe(StatusCode::OK->value);
 });

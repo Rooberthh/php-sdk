@@ -7,11 +7,9 @@ namespace Rooberthh\Sdk\Contracts;
 interface DataObjectContract
 {
     /**
-     * @param class-string $class
-     * @param array<mixed, mixed> $payload
+     * Build the object from a decoded API response.
+     *
+     * @param array<mixed, mixed> $data
      */
-    public static function create(string $class, array $payload): DataObjectContract;
-
-    /** @param array<mixed, mixed> $data */
-    public static function make(array $data): DataObjectContract;
+    public static function make(array $data): static;
 }
