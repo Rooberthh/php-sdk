@@ -8,7 +8,7 @@ use Http\Client\Common\Plugin;
 use Http\Client\Common\PluginClient;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\ResponseInterface;
+use Rooberthh\Sdk\Response;
 
 interface ClientContract
 {
@@ -20,7 +20,7 @@ interface ClientContract
 
     public function url(): string;
 
-    public function send(RequestInterface $request): ResponseInterface;
+    public function send(RequestInterface $request): Response;
 
     public function setClient(ClientInterface $client): ClientContract;
 

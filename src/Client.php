@@ -11,7 +11,6 @@ use Http\Client\Common\PluginClient;
 use Http\Discovery\Psr18ClientDiscovery;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\ResponseInterface;
 use Rooberthh\Sdk\Contracts\AuthenticationContract;
 use Rooberthh\Sdk\Contracts\ClientContract;
 
@@ -26,13 +25,9 @@ abstract class Client implements ClientContract
         //
     }
 
-    /**
-     * @param  RequestInterface  $request
-     * @return ResponseInterface
-     */
-    public function send(RequestInterface $request): ResponseInterface
+    public function send(RequestInterface $request): Response
     {
-        return $this->client->sendRequest($request);
+        return new Response($this->client->sendRequest($request));
     }
 
     public function client(): PluginClient

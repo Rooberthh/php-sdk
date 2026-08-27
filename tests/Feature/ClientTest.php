@@ -61,5 +61,5 @@ it('can post a payload', function () {
 
     $response = $client->tests()->storeJson(['test' => 'payload']);
 
-    expect($response->getStatusCode())->toBe(StatusCode::OK->value);
+    expect($response->status())->toBe(StatusCode::OK->value);
 });
