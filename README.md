@@ -182,10 +182,10 @@ $request = FilterBuilder::for($this->request(Method::GET, '/users'))
     ->where('page', 1)
     ->apply();
 
-// Conditional filters
+// Optional filters - null is dropped, so no conditionals are needed
 $request = FilterBuilder::for($this->request(Method::GET, '/users'))
     ->where('status', 'active')
-    ->when($search, fn($builder) => $builder->where('q', $search))
+    ->where('q', $search ?: null)
     ->apply();
 
 // The key format is up to you - use whatever your API expects
@@ -193,7 +193,32 @@ $request = FilterBuilder::for($this->request(Method::GET, '/products'))
     ->where('filter[price][gte]', 100)  // Nested bracket notation
     ->where('price_lte', 500)            // Underscore notation
     ->apply();
+
+// Bulk filters - nulls are dropped, so optional filters can be passed straight through
+$request = FilterBuilder::for($this->request(Method::GET, '/users'))
+    ->whereAll(['status' => $status, 'role' => $role])
+    ->apply();
 ```
+
+#### Value handling
+
+Values are normalised when the query string is built:
+
+| Given                 | Sent as                     |
+| --------------------- | --------------------------- |
+| `null`                | omitted entirely            |
+| `true` / `false`      | `true` / `false`            |
+| Backed enum           | its `value`                 |
+| Pure enum             | its `name`                  |
+| `DateTimeInterface`   | ATOM (`2026-01-02T03:04:05+00:00`) |
+| `array`               | bracketed pairs (`tags[0]=vip&tags[1]=new`) |
+| `Stringable`          | its string form             |
+
+Anything else throws an `InvalidArgumentException` naming the offending filter.
+
+Query parameters already present on the request are preserved; filters merge over
+them, and bracketed keys merge key by key rather than colliding. Values are encoded
+per RFC 3986, so spaces become `%20` rather than `+`.
 
 ## Advanced Usage
 
