@@ -22,6 +22,18 @@ final class UnableToReadResponse extends RuntimeException implements SdkExceptio
         parent::__construct($message, 0, $previous);
     }
 
+    public static function missingKey(Response $response, string|int $key): self
+    {
+        return new self(
+            sprintf(
+                'The API response has no [%s] to read. It contains: %s.',
+                $key,
+                implode(', ', array_map(strval(...), array_keys($response->json()))) ?: '(nothing)',
+            ),
+            $response,
+        );
+    }
+
     public static function notJson(Response $response, ?Throwable $previous = null): self
     {
         return new self(

@@ -65,8 +65,7 @@
             "pestphp/pest-plugin": true
         },
         "optimize-autoloader": true,
-        "sort-packages": true,
-        "classmap-authoritative": true
+        "sort-packages": true
     },
     "scripts": {
         "generate-sdk": [

@@ -27,7 +27,8 @@ abstract class Paginator implements IteratorAggregate
     /**
      * @param class-string<T> $dataObject the object each entry is built into
      * @param null|string     $dataKey    key holding the entries, for enveloped
-     *                                    responses like `{"data": [...]}`
+     *                                    responses like `{"data": [...]}`; a dot
+     *                                    path reaches deeper, `result.items`
      * @param int             $maxPages   stops a broken endpoint paging forever
      * @param ClientContract $client
      * @param RequestInterface $request
@@ -97,17 +98,18 @@ abstract class Paginator implements IteratorAggregate
     /**
      * The raw entries on a page.
      *
+     * A key that leads nowhere gives an empty page rather than an error: the
+     * paginators read the size of this to decide when to stop, so a page that
+     * has lost its key ends the walk instead of blowing up halfway through an
+     * iteration.
+     *
      * @param Response $response
      * @return list<mixed>
      */
     protected function entries(Response $response): array
     {
-        $body = $response->json();
+        $entries = $response->json($this->dataKey);
 
-        if ($this->dataKey !== null) {
-            $body = is_array($body[$this->dataKey] ?? null) ? $body[$this->dataKey] : [];
-        }
-
-        return array_values($body);
+        return is_array($entries) ? array_values($entries) : [];
     }
 }
