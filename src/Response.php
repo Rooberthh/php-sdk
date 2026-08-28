@@ -65,7 +65,7 @@ final class Response
      * A key is tried whole before it is split, so an API that really does send
      * a "meta.total" key is still readable.
      *
-     * @param  null|string|int $key
+     * @param  null|int|string $key
      * @param  mixed           $default
      *
      * @throws UnableToReadResponse when the body is not a JSON object or array
@@ -154,7 +154,7 @@ final class Response
      * @template T of DataObjectContract
      *
      * @param  class-string<T> $class
-     * @param null|string|int $key
+     * @param null|int|string $key
      * @return T
      */
     public function dto(string $class, string|int|null $key = null): DataObjectContract
@@ -172,7 +172,7 @@ final class Response
      * @template T of DataObjectContract
      *
      * @param  class-string<T> $class
-     * @param null|string|int $key
+     * @param null|int|string $key
      * @return list<T>
      */
     public function dtos(string $class, string|int|null $key = null): array
@@ -214,7 +214,7 @@ final class Response
      * than a default: naming a key and a class asserts a shape, and there is
      * no meaningful object to hand back when it is not there.
      *
-     * @param null|string|int $key
+     * @param null|int|string $key
      * @return array<mixed, mixed>
      */
     private function section(string|int|null $key): array

@@ -29,7 +29,7 @@ final class Arr
      * ecosystem.
      *
      * @param  array<mixed, mixed> $array
-     * @param  null|string|int     $key
+     * @param  null|int|string     $key
      * @param  mixed               $default
      * @return mixed
      */
