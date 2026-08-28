@@ -9,6 +9,7 @@ use Nyholm\Psr7\Response;
 use PHPUnit\Framework\TestCase as BaseTestCase;
 use Rooberthh\Sdk\Client;
 use Rooberthh\Sdk\Contracts\ClientContract;
+use Rooberthh\Sdk\Http\Builder;
 use Rooberthh\Sdk\Tests\Stubs\MockSDK;
 
 abstract class SdkTestCase extends BaseTestCase
@@ -17,7 +18,7 @@ abstract class SdkTestCase extends BaseTestCase
     {
         return new MockSDK(
             url: 'https://api.mock.com',
-            client: new MockClient(),
+            builder: new Builder(new MockClient()),
         );
     }
 
@@ -41,7 +42,7 @@ abstract class SdkTestCase extends BaseTestCase
 
         return (new MockSDK(
             url: 'https://api.mock.com',
-            client: $mockClient,
+            builder: new Builder($mockClient),
         ));
     }
 

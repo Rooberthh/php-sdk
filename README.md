@@ -4,13 +4,15 @@ A flexible PHP SDK framework that helps you quickly build API client libraries w
 
 ## Requirements
 
-- PHP 8.1 or higher
+- PHP 8.3 or higher
 - Composer
+- A PSR-18 HTTP client and PSR-17 factories (any implementation; discovered automatically)
 
 ## Dependencies
 
-- `php-http/httplug` - HTTP client abstraction
-- `league/object-mapper` - Automatic DTO hydration
+- `php-http/client-common` - the plugin chain requests pass through
+- `php-http/discovery` - finds your installed PSR-18 client and PSR-17 factories
+- `cuyz/valinor` - maps API responses onto data objects
 - `rooberthh/http-tools` - HTTP utilities
 
 ## Quick Start
@@ -38,53 +40,118 @@ The fastest way to create your SDK is using the included CLI generator that you 
 
 namespace MyApi;
 
+use Http\Message\Authentication;
+use Http\Message\Authentication\Bearer;
 use Rooberthh\Sdk\Client;
 use Rooberthh\Sdk\Contracts\AuthenticationContract;
+use Rooberthh\Sdk\Http\Builder;
 use MyApi\Resources\UserResource;
-use Http\Client\Common\Plugin\AuthenticationPlugin;
-use Http\Message\Authentication\Bearer;
 
 class MyApiClient extends Client implements AuthenticationContract
 {
+    public function __construct(
+        string $url,
+        private readonly string $token,
+        ?Builder $builder = null,
+    ) {
+        parent::__construct($url, $builder);
+    }
+
     public function users(): UserResource
     {
         return new UserResource($this);
     }
 
-    public function authentication(): AuthenticationPlugin
+    public function authentication(): Authentication
     {
-        return new AuthenticationPlugin(new Bearer('my-api-token'));
+        return new Bearer($this->token);
     }
 }
 ```
 
+Credentials are promoted constructor properties on purpose. `authentication()`
+is called from `parent::__construct()`, and promoted properties are assigned
+before the parent constructor body runs — assigning them afterwards fails with
+*"must not be accessed before initialization"*.
+
 ### Using Your Generated SDK
 
 ```php
-$client = new MyApi\MyApiClient();
+$client = new MyApi\MyApiClient('https://api.example.com');
 
 // Use the resource methods
 $user = $client->users()->show(1);
 echo $user->name;
 ```
 
+The client assembles its own transport from whatever PSR-18 client and PSR-17
+factories you have installed, so nothing else needs wiring up. To supply your
+own, pass a `Builder`:
+
+```php
+use Rooberthh\Sdk\Http\Builder;
+
+$client = new MyApi\MyApiClient(
+    url: 'https://api.example.com',
+    builder: new Builder($myPsr18Client),
+);
+```
+
 ## Authentication
 
 ### How Authentication Works
 
-The SDK uses a plugin-based authentication system built on `php-http/httplug`. When your client implements the `AuthenticationContract` you can leverage the authentication forms provided from `php-http/httplug`.
+Implement `AuthenticationContract` and the credentials it returns are applied to
+every request — the client wires it up in its constructor, so there is no
+separate setup step.
 
 #### Bearer Token
 
 ```php
-use Http\Client\Common\Plugin\AuthenticationPlugin;
+use Http\Message\Authentication;
 use Http\Message\Authentication\Bearer;
 
 class MyApiClient extends Client implements AuthenticationContract
 {
-    public function authentication(): AuthenticationPlugin
+    public function authentication(): Authentication
     {
-        return new AuthenticationPlugin(new Bearer('your-api-token'));
+        return new Bearer($this->token);
+    }
+}
+```
+
+#### Other forms
+
+`php-http/message` ships the common ones — swap `Bearer` for any of these:
+
+| Class | Sends |
+| --- | --- |
+| `Bearer` | `Authorization: Bearer <token>` |
+| `BasicAuth` | `Authorization: Basic <base64>` |
+| `Header` | any header you name |
+| `QueryParam` | credentials as query parameters |
+| `Wsse` | a WSSE token |
+| `Chain` | several of the above, in order |
+
+#### Signing requests, and refreshing tokens
+
+Anything else is your own `Authentication`. It is handed the request and
+returns it authenticated, so HMAC signing and fetching a fresh token both
+belong here:
+
+```php
+use Http\Message\Authentication;
+use Psr\Http\Message\RequestInterface;
+
+final class HmacSignature implements Authentication
+{
+    public function __construct(private readonly string $secret) {}
+
+    public function authenticate(RequestInterface $request): RequestInterface
+    {
+        $signature = hash_hmac('sha256', (string) $request->getBody(), $this->secret);
+
+        return $request->withHeader('X-Signature', $signature);
     }
 }
 ```
@@ -222,13 +289,60 @@ per RFC 3986, so spaces become `%20` rather than `+`.
 
 ## Advanced Usage
 
+### The transport
+
+Every request passes through a plugin chain held by a `Builder`. Plugins can be
+added and removed at any point, and the client is rebuilt on the next request:
+
+```php
+use Http\Client\Common\Plugin\RetryPlugin;
+
+$client->builder()->addPlugin(new RetryPlugin(['retries' => 3]));
+$client->builder()->removePlugin(RetryPlugin::class);
+```
+
+Anything implementing `Http\Client\Common\Plugin` fits here — logging,
+retries, redirects, recording. `php-http/cache-plugin` adds HTTP response
+caching if you install it.
+
+To apply plugins to every client of a given SDK instead, override
+`defaultPlugins()`:
+
+```php
+class MyApiClient extends Client implements AuthenticationContract
+{
+    public function defaultPlugins(): array
+    {
+        return [new RetryPlugin(['retries' => 3])];
+    }
+}
+```
+
+It returns nothing by default. `ErrorPlugin` is deliberately not included:
+failures are reported by `$response->failed()` and thrown only when you call
+`$response->throw()`. `RetryPlugin` is left out too, since retrying a request
+that is not idempotent is the SDK author's call to make.
+
+### Reading the last response
+
+Resource methods usually return data objects, which discards the response they
+came from. `getLastResponse()` gets it back — for pagination links, rate limit
+headers, or request ids:
+
+```php
+$users = $client->users()->list();          // list<UserDataObject>
+
+$client->getLastResponse()?->header('X-RateLimit-Remaining');
+$client->getLastResponse()?->status();
+```
+
 ### Custom headers
 Override `defaultHeaders()` in your client:
 
 ```php
 class MyApiClient extends Client implements AuthenticationContract
 {
-    protected function defaultHeaders(): array
+    public function defaultHeaders(): array
     {
         return [
             'Accept' => 'application/json',

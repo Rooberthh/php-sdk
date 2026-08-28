@@ -6,6 +6,7 @@ namespace Rooberthh\Sdk\Tests\Feature;
 
 use Http\Mock\Client as MockClient;
 use Nyholm\Psr7\Response;
+use Rooberthh\Sdk\Http\Builder;
 use Rooberthh\Sdk\Tests\SdkTestCase;
 use Rooberthh\Sdk\Tests\Stubs\Enums\Status;
 use Rooberthh\Sdk\Tests\Stubs\MockSDK;
@@ -25,7 +26,7 @@ function sentBody(string $method, mixed $payload): string
     $mock = new MockClient();
     $mock->addResponse(new Response(200, [], '{}'));
 
-    (new MockSDK(url: 'https://api.mock.com', client: $mock))
+    (new MockSDK(url: 'https://api.mock.com', builder: new Builder($mock)))
         ->tests()
         ->{$method}($payload);
 

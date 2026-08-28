@@ -7,7 +7,6 @@ namespace Rooberthh\Sdk\Concerns\Resources;
 use CuyZ\Valinor\Normalizer\Configurator\NormalizeKeysToSnakeCase;
 use CuyZ\Valinor\Normalizer\Format;
 use CuyZ\Valinor\NormalizerBuilder;
-use Http\Discovery\Psr17FactoryDiscovery;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\StreamInterface;
 use Rooberthh\HttpTools\Enums\Method;
@@ -18,7 +17,7 @@ trait CanCreateRequests
     {
         $uri = ltrim($uri, '/');
 
-        return Psr17FactoryDiscovery::findRequestFactory()->createRequest(
+        return $this->client->builder()->getRequestFactory()->createRequest(
             method: $method->value,
             uri: "{$this->client->url()}/{$uri}",
         );
@@ -69,6 +68,6 @@ trait CanCreateRequests
      */
     public function body(string $body): StreamInterface
     {
-        return Psr17FactoryDiscovery::findStreamFactory()->createStream($body);
+        return $this->client->builder()->getStreamFactory()->createStream($body);
     }
 }

@@ -76,28 +76,51 @@ function writeFile(string $path, string $content): void
 
 function generateClientClass(string $namespace, string $className, ?string $authType): string
 {
-    $authImplements = $authType ? ' implements AuthenticationContract' : '';
-    $authUse = $authType ? "use Rooberthh\\Sdk\\Contracts\\AuthenticationContract;\n" : '';
-    $authPluginImport = '';
+    $implements = $authType ? ' implements AuthenticationContract' : '';
+    $imports = '';
+    $constructorArgs = '';
     $authMethod = '';
 
+    if ($authType !== null) {
+        $imports = "use Http\\Message\\Authentication;\n";
+    }
+
     if ($authType === 'bearer') {
-        $authPluginImport = "use Http\\Client\\Common\\Plugin\\AuthenticationPlugin;\nuse Http\\Message\\Authentication\\Bearer;\n";
+        $imports .= "use Http\\Message\\Authentication\\Bearer;\n";
+        $constructorArgs = "\n        private readonly string \$token,";
         $authMethod = "
-    public function authentication(): AuthenticationPlugin
+    public function authentication(): Authentication
     {
-        return new AuthenticationPlugin(new Bearer('my-api-token'));
+        return new Bearer(\$this->token);
     }
 ";
     } elseif ($authType === 'basic') {
-        $authPluginImport = "use Http\\Client\\Common\\Plugin\\AuthenticationPlugin;\nuse Http\\Message\\Authentication\\BasicAuth;\n";
+        $imports .= "use Http\\Message\\Authentication\\BasicAuth;\n";
+        $constructorArgs = "\n        private readonly string \$username,\n        private readonly string \$password,";
         $authMethod = "
-    public function authentication(): AuthenticationPlugin
+    public function authentication(): Authentication
     {
-        return new AuthenticationPlugin(new BasicAuth('username', 'password'));
+        return new BasicAuth(\$this->username, \$this->password);
     }
 ";
     }
+
+    // Credentials are promoted constructor properties on purpose: authentication()
+    // is called from parent::__construct(), and promoted properties are assigned
+    // before the parent constructor body runs. Assigning them afterwards would
+    // fail with "must not be accessed before initialization".
+    $constructor = <<<CTOR
+
+    public function __construct(
+        string \$url,{$constructorArgs}
+        ?Builder \$builder = null,
+    ) {
+        parent::__construct(\$url, \$builder);
+    }
+
+CTOR;
+
+    $authUse = $authType ? "use Rooberthh\\Sdk\\Contracts\\AuthenticationContract;\n" : '';
 
     return <<<PHP
 <?php
@@ -106,11 +129,12 @@ declare(strict_types=1);
 
 namespace {$namespace};
 
-use Rooberthh\Sdk\Client;
-{$authUse}use {$namespace}\Resources\UserResource;
-{$authPluginImport}
-class {$className} extends Client{$authImplements}
-{
+{$imports}use Rooberthh\Sdk\Client;
+{$authUse}use Rooberthh\Sdk\Http\Builder;
+use {$namespace}\Resources\UserResource;
+
+class {$className} extends Client{$implements}
+{{$constructor}
     public function users(): UserResource
     {
         return new UserResource(\$this);
@@ -148,11 +172,8 @@ class {$resourceName}
     public function show(int \$id): {$dataObjectName}
     {
         \$request = \$this->request(Method::GET, "/users/{\$id}");
-        \$response = \$this->client->send(\$request);
 
-        \$data = json_decode(\$response->getBody()->getContents(), true);
-
-        return {$dataObjectName}::make(\$data);
+        return \$this->client->send(\$request)->dto({$dataObjectName}::class);
     }
 }
 
@@ -298,7 +319,13 @@ echo "  - {$installPath}/Resources/UserResource.php\n";
 echo "  - {$installPath}/DataObjects/UserDataObject.php\n";
 echo "\n";
 echo "Usage example:\n";
-echo "  \$client = new {$namespace}\\{$clientClassName}('https://api.example.com', \$httpClient);\n";
+$credentialArgs = match ($authType) {
+    'bearer' => ", 'your-api-token'",
+    'basic'  => ", 'username', 'password'",
+    default  => '',
+};
+
+echo "  \$client = new {$namespace}\\{$clientClassName}('https://api.example.com'{$credentialArgs});\n";
 echo "  \$user = \$client->users()->show(1);\n";
 echo "  echo \$user->name;\n";
 echo "\n";

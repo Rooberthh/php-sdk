@@ -18,10 +18,15 @@ use Rooberthh\Sdk\Exceptions\UnableToReadResponse;
  * behalf: a failed request is reported by {@see self::failed()}, not thrown,
  * and data objects are built only if you ask for them.
  */
-final readonly class Response
+final class Response
 {
+    private ?string $body = null;
+
+    /** @var null|array<mixed, mixed> */
+    private ?array $decoded = null;
+
     public function __construct(
-        private ResponseInterface $response,
+        private readonly ResponseInterface $response,
     ) {}
 
     /**
@@ -37,9 +42,13 @@ final readonly class Response
         return $this->response->getStatusCode();
     }
 
+    /**
+     * The raw body, read once and kept — a response body is not always
+     * rewindable, so reading it twice would otherwise come back empty.
+     */
     public function body(): string
     {
-        return (string) $this->response->getBody();
+        return $this->body ??= (string) $this->response->getBody();
     }
 
     /**
@@ -51,6 +60,10 @@ final readonly class Response
      */
     public function json(): array
     {
+        if ($this->decoded !== null) {
+            return $this->decoded;
+        }
+
         try {
             $decoded = json_decode($this->body(), associative: true, flags: JSON_THROW_ON_ERROR);
         } catch (JsonException $exception) {
@@ -61,7 +74,7 @@ final readonly class Response
             throw UnableToReadResponse::notJson($this);
         }
 
-        return $decoded;
+        return $this->decoded = $decoded;
     }
 
     public function header(string $name): ?string

@@ -8,6 +8,7 @@ use Rooberthh\Sdk\Exceptions\SdkException;
 use Rooberthh\Sdk\Exceptions\UnableToReadResponse;
 use Rooberthh\Sdk\Response;
 use Rooberthh\Sdk\Tests\Stubs\DataObjects\TestDataObject;
+use Rooberthh\Sdk\Tests\Stubs\NonSeekableStream;
 use Psr\Http\Message\ResponseInterface;
 
 function response(int $status = 200, string $body = '{}', array $headers = []): Response
@@ -88,4 +89,20 @@ it('builds a data object per entry of a list body', function () {
     expect($objects)->toHaveCount(2)
         ->and($objects[1])->toBeInstanceOf(TestDataObject::class)
         ->name->toBe('B');
+});
+
+it('can be read more than once even when the body cannot rewind', function () {
+    $response = new Response(new Psr7Response(200, [], new NonSeekableStream('{"id":1,"name":"A","desc":"x"}')));
+
+    expect($response->json())->toBe(['id' => 1, 'name' => 'A', 'desc' => 'x'])
+        ->and($response->json())->toBe(['id' => 1, 'name' => 'A', 'desc' => 'x'])
+        ->and($response->body())->toBe('{"id":1,"name":"A","desc":"x"}')
+        ->and($response->body())->toBe('{"id":1,"name":"A","desc":"x"}');
+});
+
+it('can build a dto and still read the body afterwards', function () {
+    $response = new Response(new Psr7Response(200, [], new NonSeekableStream('{"id":7,"name":"A","desc":"x"}')));
+
+    expect($response->dto(TestDataObject::class)->id)->toBe(7)
+        ->and($response->json()['id'])->toBe(7);
 });

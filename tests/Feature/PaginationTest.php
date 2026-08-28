@@ -7,9 +7,11 @@ namespace Rooberthh\Sdk\Tests\Feature;
 use Http\Mock\Client as MockClient;
 use Nyholm\Psr7\Response;
 use Rooberthh\Sdk\Exceptions\PaginationFailed;
+use Rooberthh\Sdk\Http\Builder;
 use Rooberthh\Sdk\Tests\SdkTestCase;
 use Rooberthh\Sdk\Tests\Stubs\DataObjects\TestDataObject;
 use Rooberthh\Sdk\Tests\Stubs\MockSDK;
+use Rooberthh\Sdk\Tests\Stubs\NonSeekableStream;
 
 uses(SdkTestCase::class);
 
@@ -24,7 +26,7 @@ function paginating(array $bodies): array
         $mock->addResponse(new Response(200, [], $body));
     }
 
-    return [new MockSDK(url: 'https://api.mock.com', client: $mock), $mock];
+    return [new MockSDK(url: 'https://api.mock.com', builder: new Builder($mock)), $mock];
 }
 
 function card(int $id): string
@@ -128,8 +130,20 @@ it('refuses to page forever', function () {
     $mock->addResponse(new Response(200, [], '[' . card(1) . ',' . card(2) . ']'));
     $mock->setDefaultResponse(new Response(200, [], '[' . card(1) . ',' . card(2) . ']'));
 
-    $client = new MockSDK(url: 'https://api.mock.com', client: $mock);
+    $client = new MockSDK(url: 'https://api.mock.com', builder: new Builder($mock));
 
     expect(fn() => $client->tests()->paged(perPage: 2)->all())
         ->toThrow(PaginationFailed::class, 'Stopped after');
 })->skip(fn() => !method_exists(MockClient::class, 'setDefaultResponse'), 'mock client cannot repeat responses');
+
+it('paginates over bodies that can only be read once', function () {
+    $mock = new MockClient();
+    $mock->addResponse(new Response(200, [], new NonSeekableStream('[' . card(1) . ',' . card(2) . ']')));
+    $mock->addResponse(new Response(200, [], new NonSeekableStream('[' . card(3) . ']')));
+
+    $client = new MockSDK(url: 'https://api.mock.com', builder: new Builder($mock));
+
+    $ids = array_map(static fn($object) => $object->id, $client->tests()->paged()->all());
+
+    expect($ids)->toBe([1, 2, 3]);
+});
