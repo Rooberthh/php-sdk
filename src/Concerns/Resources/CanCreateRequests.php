@@ -16,7 +16,7 @@ trait CanCreateRequests
     public function request(Method $method, string $uri): RequestInterface
     {
         $uri = ltrim($uri, '/');
-
+    
         return $this->client->builder()->getRequestFactory()->createRequest(
             method: $method->value,
             uri: "{$this->client->url()}/{$uri}",
