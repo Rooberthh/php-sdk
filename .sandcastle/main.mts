@@ -21,6 +21,7 @@
 // Or add to package.json:
 //   "scripts": { "sandcastle": "npx tsx .sandcastle/main.mts" }
 
+import { execFileSync } from "node:child_process";
 import * as sandcastle from "@ai-hero/sandcastle";
 import { docker } from "@ai-hero/sandcastle/sandboxes/docker";
 
@@ -43,12 +44,26 @@ const hooks = {
 // platform-specific binaries and any packages added since the last copy.
 const copyToWorktree = ["node_modules", "vendor"];
 
+// The issues the implementer can pick from: the same filtered list
+// implement-prompt.md shows it.
+function readyIssues(): Set<number> {
+  const output = execFileSync(
+    "gh",
+    ["issue", "list", "--state", "open", "--label", "ready-for-agent", "--limit", "100", "--json", "number", "--jq", ".[].number"],
+    { encoding: "utf8" },
+  );
+
+  return new Set(output.split("\n").filter(Boolean).map(Number));
+}
+
 // ---------------------------------------------------------------------------
 // Main loop
 // ---------------------------------------------------------------------------
 
 for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   console.log(`\n=== Iteration ${iteration}/${MAX_ITERATIONS} ===\n`);
+
+  const readyBefore = readyIssues();
 
   // Generate a unique branch name for this iteration.
   const branch = `sandcastle/sequential-reviewer/${Date.now()}`;
@@ -111,6 +126,16 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     });
 
     console.log("\nReview complete.");
+
+    // The implementer closes the issue it finished. If every issue it could
+    // pick from is still open, closing failed, and the next iteration would
+    // pick the same issue and redo the work on a new branch.
+    const readyAfter = readyIssues();
+
+    if ([...readyBefore].every((issue) => readyAfter.has(issue))) {
+      console.log("No ready issue was closed this iteration. Stopping so the same issue is not redone.");
+      break;
+    }
   } finally {
     await sandbox.close();
   }
