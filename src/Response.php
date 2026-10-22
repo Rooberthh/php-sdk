@@ -180,7 +180,7 @@ final class Response
      * 'data')` reads `{"data": {...}}`.
      *
      * Asking for a Data Object asserts the request succeeded: a failed response
-     * is thrown as {@see RequestFailed} before the body is read, so the error is
+     * is thrown ({@see self::throw()}) before the body is read, so the error is
      * the failed status rather than whatever the error body failed to map to.
      *
      * @template T of DataObjectContract
@@ -188,7 +188,7 @@ final class Response
      * @param  class-string<T> $class
      * @param null|int|string $key
      *
-     * @throws RequestFailed when the response did not come back 2xx
+     * @throws Throwable when the response did not come back 2xx
      * @return T
      */
     public function dataObject(string $class, string|int|null $key = null): DataObjectContract
@@ -206,14 +206,14 @@ final class Response
      * one, the body itself must be the list.
      *
      * Asking for Data Objects asserts the request succeeded: a failed response
-     * is thrown as {@see RequestFailed} before the body is read.
+     * is thrown ({@see self::throw()}) before the body is read.
      *
      * @template T of DataObjectContract
      *
      * @param  class-string<T> $class
      * @param null|int|string $key
      *
-     * @throws RequestFailed when the response did not come back 2xx
+     * @throws Throwable when the response did not come back 2xx
      * @return list<T>
      */
     public function dataObjects(string $class, string|int|null $key = null): array
@@ -230,7 +230,7 @@ final class Response
      * One page of results, with whatever the API said about where it sits.
      *
      * Asking for a page asserts the request succeeded: a failed response is
-     * thrown as {@see RequestFailed} before the body is read.
+     * thrown ({@see self::throw()}) before the body is read.
      *
      * @template T of DataObjectContract
      *
@@ -238,7 +238,7 @@ final class Response
      * @param string $dataKey
      * @param string $metaKey
      *
-     * @throws RequestFailed when the response did not come back 2xx
+     * @throws Throwable when the response did not come back 2xx
      * @return PaginatedResponse<T>
      */
     public function paginated(

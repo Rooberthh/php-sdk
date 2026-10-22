@@ -435,8 +435,8 @@ protected function exceptionFor(Response $response): ?Throwable
 }
 ```
 
-Have your exceptions implement `Rooberthh\Sdk\Exceptions\SdkException` and
-Consumers can catch everything the SDK throws — yours and `RequestFailed` — with
+Have your exceptions implement `Rooberthh\Sdk\Exceptions\SdkException`, and
+consumers can catch everything the SDK throws — yours and `RequestFailed` — with
 a single catch.
 
 ## Special Thanks
