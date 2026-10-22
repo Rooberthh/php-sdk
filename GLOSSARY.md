@@ -1,6 +1,6 @@
 # PHP SDK
 
-A framework for building API client libraries in PHP: it supplies the request, response and pagination machinery so that wrapping an HTTP API is mostly declaring its shape.
+A framework for building API client libraries in PHP: it supplies the request and response machinery so that wrapping an HTTP API is mostly declaring its shape.
 
 ## Language
 

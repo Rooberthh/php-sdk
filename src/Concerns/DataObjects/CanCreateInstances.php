@@ -9,6 +9,14 @@ use CuyZ\Valinor\Mapper\MappingError;
 use CuyZ\Valinor\MapperBuilder;
 use Rooberthh\Sdk\Exceptions\UnableToHydrateResponse;
 
+/**
+ * Gives a Data Object the make() that builds it from an API response.
+ *
+ * It exists for SDK Authors to compose into their own Data Objects, so nothing
+ * inside src/ uses it.
+ *
+ * @phpstan-ignore trait.unused
+ */
 trait CanCreateInstances
 {
     /**

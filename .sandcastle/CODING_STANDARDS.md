@@ -19,7 +19,7 @@
 ## Testing
 
 - Tests are written with Pest (`it('...')` closures and the `expect()` API), not PHPUnit test classes.
-- `tests/Unit` covers single classes; `tests/Feature` covers flows through the client (pagination, request payloads, etc.).
+- `tests/Unit` covers single classes; `tests/Feature` covers flows through the client (requests, request payloads, the fake transport).
 - Test doubles live in `tests/Stubs`; JSON response fixtures live in `tests/Fixtures`.
 - HTTP is faked with `Rooberthh\Sdk\Testing\FakeTransport` (older tests use `php-http/mock-client`); tests never hit the network.
 
@@ -31,4 +31,4 @@
 - Exceptions are `final`, extend an SPL exception, and implement `SdkException` so consumers can catch everything the SDK throws. They are named for what went wrong, without an `Exception` suffix (`RequestFailed`, `UnableToReadResponse`), and are built through named static constructors (`::with()`, `::for()`, `::missingKey()`) rather than `new`.
 - Data objects implement `DataObjectContract` and hydrate through `CanCreateInstances`: snake_case response keys map to camelCase properties, and unknown keys are ignored so new API fields aren't breaking changes.
 - Wrap PSR-7/17/18 objects rather than replace them, and keep the original reachable (e.g. `Response::psr()`).
-- Don't decide on the caller's behalf: a failed response is reported (`failed()`), not thrown, unless the caller asks (`throw()`) or asks for Data Objects (`dataObject()`, `dataObjects()`, `paginated()`), which assert success.
+- Don't decide on the caller's behalf: a failed response is reported (`failed()`), not thrown, unless the caller asks (`throw()`) or asks for Data Objects (`dataObject()`, `dataObjects()`), which assert success.
