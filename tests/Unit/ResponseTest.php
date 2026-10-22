@@ -74,6 +74,51 @@ it('explains itself when the body is not json', function () {
         ->toThrow(UnableToReadResponse::class, 'Expected a JSON body but the API responded with 502');
 });
 
+it('throws the failed request rather than build a data object', function () {
+    $response = response(404, '{"message":"Not found"}');
+
+    try {
+        $response->dataObject(TestDataObject::class);
+        $this->fail('Expected RequestFailed to be thrown.');
+    } catch (RequestFailed $exception) {
+        expect($exception->getMessage())->toContain('404')
+            ->and($exception->response)->toBe($response);
+    }
+});
+
+it('throws the failed request rather than build a list of data objects', function () {
+    $response = response(404, '{"message":"Not found"}');
+
+    try {
+        $response->dataObjects(TestDataObject::class);
+        $this->fail('Expected RequestFailed to be thrown.');
+    } catch (RequestFailed $exception) {
+        expect($exception->getMessage())->toContain('404')
+            ->and($exception->response)->toBe($response);
+    }
+});
+
+it('throws the failed request rather than build a page', function () {
+    $response = response(404, '{"message":"Not found"}');
+
+    try {
+        $response->paginated(TestDataObject::class);
+        $this->fail('Expected RequestFailed to be thrown.');
+    } catch (RequestFailed $exception) {
+        expect($exception->getMessage())->toContain('404')
+            ->and($exception->response)->toBe($response);
+    }
+});
+
+it('throws the failed request rather than fail to read a non-json error page', function () {
+    expect(fn() => response(500, '<html>oops</html>')->dataObject(TestDataObject::class))
+        ->toThrow(RequestFailed::class);
+});
+
+it('still reads the body of a failed response with json()', function () {
+    expect(response(422, '{"error":"nope"}')->json())->toBe(['error' => 'nope']);
+});
+
 it('builds a data object from the body', function () {
     $object = response(body: '{"id":1,"name":"Test","desc":"A card."}')
         ->dataObject(TestDataObject::class);

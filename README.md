@@ -236,6 +236,26 @@ $this->client->request(
 );
 ```
 
+### Failed requests
+
+The Data Object methods — `dataObject()`, `dataObjects()` and `paginated()` —
+throw `RequestFailed` when the request did not come back 2xx, before they read
+the body. Asking for a Data Object asserts the request succeeded, so a failed
+response surfaces the failed status rather than a mapping or reading error:
+
+```php
+try {
+    $user = $this->client->request(Method::GET, "/users/{$id}")
+        ->dataObject(UserDataObject::class);
+} catch (RequestFailed $exception) {
+    // $exception->response is the failed Response
+    $status = $exception->response->status();
+}
+```
+
+Everything else only reports failure: `failed()`, `successful()`, `status()`,
+`json()`, `body()` and the header methods never throw on a failed response.
+
 ### Query parameters
 
 The `query` argument adds query-string parameters to the request. Null values
@@ -312,7 +332,7 @@ class MyApiClient extends Client implements AuthenticationContract
 
 It returns nothing by default. `ErrorPlugin` is deliberately not included:
 failures are reported by `$response->failed()` and thrown only when you call
-`$response->throw()`. `RetryPlugin` is left out too, since retrying a request
+`$response->throw()` or ask for Data Objects. `RetryPlugin` is left out too, since retrying a request
 that is not idempotent is the SDK author's call to make.
 
 ### Reading the last response
