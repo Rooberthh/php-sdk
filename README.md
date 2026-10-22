@@ -166,106 +166,98 @@ Resources represent API endpoints and handle HTTP requests. Each resource typica
 namespace MyApi\Resources;
 
 use Rooberthh\Sdk\Concerns\Resources\CanAccessClient;
-use Rooberthh\Sdk\Concerns\Resources\CanCreateRequests;
-use Rooberthh\Sdk\FilterBuilder;
 use Rooberthh\HttpTools\Enums\Method;
 use MyApi\DataObjects\UserDataObject;
 
 class UserResource
 {
     use CanAccessClient;
-    use CanCreateRequests;
 
     public function list(): array
     {
-        // Use FilterBuilder for fluent query parameter construction
-        $request = FilterBuilder::for($this->request(Method::GET, '/users'))
-            ->where('sort', 'name')
-            ->where('order', 'asc')
-            ->where('limit', 10)
-            ->apply();
-        // Results in: /users?sort=name&order=asc&limit=10
-
-        $response = $this->client->send($request);
-
-        $data = json_decode($response->getBody()->getContents(), true);
-
-        return array_map(
-            fn($user) => UserDataObject::make($user),
-            $data
-        );
+        return $this->client
+            ->request(Method::GET, '/users', query: [
+                'sort'  => 'name',
+                'order' => 'asc',
+                'limit' => 10,
+            ])
+            // Results in: /users?sort=name&order=asc&limit=10
+            ->dtos(UserDataObject::class);
     }
 
     public function show(int $id): UserDataObject
     {
-        $request = $this->request(Method::GET, "/users/{$id}");
-        $response = $this->client->send($request);
-
-        $data = json_decode($response->getBody()->getContents(), true);
-
-        return UserDataObject::make($data);
+        return $this->client
+            ->request(Method::GET, "/users/{$id}")
+            ->dto(UserDataObject::class);
     }
 
     public function create(array $userData): UserDataObject
     {
-        $request = $this->request(Method::POST, '/users')
-            ->withBody($this->payload(json_encode($userData)));
-
-        $response = $this->client->send($request);
-        $data = json_decode($response->getBody()->getContents(), true);
-
-        return UserDataObject::make($data);
+        return $this->client
+            ->request(Method::POST, '/users', body: $userData)
+            ->dto(UserDataObject::class);
     }
 
     public function update(int $id, array $userData): UserDataObject
     {
-        $request = $this->request(Method::PUT, "/users/{$id}")
-            ->withBody($this->payload(json_encode($userData)));
-
-        $response = $this->client->send($request);
-        $data = json_decode($response->getBody()->getContents(), true);
-
-        return UserDataObject::make($data);
+        return $this->client
+            ->request(Method::PUT, "/users/{$id}", body: $userData)
+            ->dto(UserDataObject::class);
     }
 
     public function delete(int $id): void
     {
-        $request = $this->request(Method::DELETE, "/users/{$id}");
-        $this->client->send($request);
+        $this->client->request(Method::DELETE, "/users/{$id}");
     }
 }
 ```
 
-### FilterBuilder
+`request()` builds the request and sends it, returning a `Response`. The `$uri`
+is joined onto the client's base URL, the `query` array is applied as query
+parameters, and the `body` is encoded by its type:
 
-The `FilterBuilder` provides a fluent interface for adding query parameters to requests:
+| `body` type | Sent as |
+| --- | --- |
+| object | snake_case JSON — camelCase properties become snake_case keys, and null properties are dropped |
+| array | JSON, exactly as given |
+| string | the raw string, untouched — for APIs that do not speak JSON |
+| `null` (default) | no body |
+
+Per-call `headers` are set on the request and win over the client's defaults, so
+a raw body can declare its own `Content-Type`:
 
 ```php
-use Rooberthh\Sdk\FilterBuilder;
-
-// Basic usage
-$request = FilterBuilder::for($this->request(Method::GET, '/users'))
-    ->where('status', 'active')
-    ->where('page', 1)
-    ->apply();
-
-// Optional filters - null is dropped, so no conditionals are needed
-$request = FilterBuilder::for($this->request(Method::GET, '/users'))
-    ->where('status', 'active')
-    ->where('q', $search ?: null)
-    ->apply();
-
-// The key format is up to you - use whatever your API expects
-$request = FilterBuilder::for($this->request(Method::GET, '/products'))
-    ->where('filter[price][gte]', 100)  // Nested bracket notation
-    ->where('price_lte', 500)            // Underscore notation
-    ->apply();
-
-// Bulk filters - nulls are dropped, so optional filters can be passed straight through
-$request = FilterBuilder::for($this->request(Method::GET, '/users'))
-    ->whereAll(['status' => $status, 'role' => $role])
-    ->apply();
+$this->client->request(
+    Method::POST,
+    '/orders',
+    body: '<order><id>1</id></order>',
+    headers: ['Content-Type' => 'application/xml'],
+);
 ```
+
+### Query parameters
+
+The `query` argument adds query-string parameters to the request. Null values
+are dropped, so optional filters can be passed straight through without
+conditionals, and the key format is whatever your API expects:
+
+```php
+// Optional filters — null is dropped
+$this->client->request(Method::GET, '/users', query: [
+    'status' => 'active',
+    'q'      => $search ?: null,
+]);
+
+// Bracket and underscore notation both pass through untouched
+$this->client->request(Method::GET, '/products', query: [
+    'filter[price][gte]' => 100,
+    'price_lte'          => 500,
+]);
+```
+
+Parameters already present in the `$uri` are preserved; the `query` array merges
+over them.
 
 #### Value handling
 
@@ -311,7 +303,7 @@ To apply plugins to every client of a given SDK instead, override
 ```php
 class MyApiClient extends Client implements AuthenticationContract
 {
-    public function defaultPlugins(): array
+    protected function defaultPlugins(): array
     {
         return [new RetryPlugin(['retries' => 3])];
     }
@@ -342,7 +334,7 @@ Override `defaultHeaders()` in your client:
 ```php
 class MyApiClient extends Client implements AuthenticationContract
 {
-    public function defaultHeaders(): array
+    protected function defaultHeaders(): array
     {
         return [
             'Accept' => 'application/json',
