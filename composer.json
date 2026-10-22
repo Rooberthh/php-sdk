@@ -46,7 +46,9 @@
     "provide": {
         "psr-discovery/http-client-implementations": "^1.0"
     },
-    "suggest": {},
+    "suggest": {
+        "phpunit/phpunit": "Required to use the FakeTransport assertions."
+    },
     "autoload": {
         "psr-4": {
             "Rooberthh\\Sdk\\": "src/"

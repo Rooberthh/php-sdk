@@ -21,7 +21,7 @@
 - Tests are written with Pest (`it('...')` closures and the `expect()` API), not PHPUnit test classes.
 - `tests/Unit` covers single classes; `tests/Feature` covers flows through the client (pagination, request payloads, etc.).
 - Test doubles live in `tests/Stubs`; JSON response fixtures live in `tests/Fixtures`.
-- HTTP is mocked with `php-http/mock-client`; tests never hit the network.
+- HTTP is faked with `Rooberthh\Sdk\Testing\FakeTransport` (older tests use `php-http/mock-client`); tests never hit the network.
 
 ## Architecture
 

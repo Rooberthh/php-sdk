@@ -295,6 +295,55 @@ Query parameters already present on the request are preserved; filters merge ove
 them, and bracketed keys merge key by key rather than colliding. Values are encoded
 per RFC 3986, so spaces become `%20` rather than `+`.
 
+## Testing your SDK
+
+Tests shouldn't hit the network, and you shouldn't have to wire a mock to avoid
+it. `Rooberthh\Sdk\Testing\FakeTransport` is a Transport you hand your Client a
+table of canned responses and plug straight into a `Builder`:
+
+```php
+use Psr\Http\Message\RequestInterface;
+use Rooberthh\Sdk\Testing\FakeResponse;
+use Rooberthh\Sdk\Testing\FakeTransport;
+
+$fake = new FakeTransport([
+    'GET users/1' => FakeResponse::json(['id' => 1, 'name' => 'Ada']),
+    'POST users'  => FakeResponse::json(['id' => 2], 201),
+    'users/*'     => FakeResponse::status(404),
+]);
+
+$client = new MyApiClient(url: 'https://api.example.com', token: 't', builder: $fake->builder());
+```
+
+Each key is an optional HTTP method, a space, then a path pattern matched against
+the request URI's path. A key without a method matches any method; `*` matches any
+run of characters, slashes included, so `*` alone matches every request. The query
+string is ignored and a leading `/` doesn't matter on either side. The first matching
+key wins, in array order. A value may be a `ResponseInterface`, an array (shorthand
+for `FakeResponse::json()`), or a `Closure(RequestInterface): ResponseInterface` for
+dynamic responses.
+
+The fake sits at the end of the plugin chain, so every recorded request is exactly
+what would have gone over the wire — auth and default headers included. Assert on
+them with the assertions (they use `PHPUnit\Framework\Assert`, so they work in both
+PHPUnit and Pest):
+
+```php
+$fake->assertSent(fn (RequestInterface $r) => $r->getMethod() === 'POST'
+    && json_decode((string) $r->getBody(), true)['name'] === 'Ada');
+
+$fake->assertNotSent(fn (RequestInterface $r) => $r->getMethod() === 'DELETE');
+$fake->assertSentCount(1);
+$fake->assertNothingSent();
+```
+
+A request that matches no key throws `Rooberthh\Sdk\Testing\UnexpectedRequest` listing
+the registered keys — a missing fake is a bug in your test, so the transport never
+falls back to a silent default.
+
+> The assertions need `phpunit/phpunit`. It ships with Pest, so if you test with Pest
+> it's already there; otherwise `composer require --dev phpunit/phpunit`.
+
 ## Advanced Usage
 
 ### The Transport
