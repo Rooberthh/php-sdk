@@ -52,6 +52,17 @@ final class Builder
     }
 
     /**
+     * Copying a Builder resets the cached composed Transport so the copy
+     * assembles its own on first use. The plugin list, the wrapped PSR-18
+     * client and the PSR-17 factories are copied shallowly — a mock transport
+     * injected for tests stays the same instance and still records requests.
+     */
+    public function __clone(): void
+    {
+        $this->pluginClient = null;
+    }
+
+    /**
      * The Transport with every plugin applied, built once and reused.
      */
     public function getHttpClient(): ClientInterface

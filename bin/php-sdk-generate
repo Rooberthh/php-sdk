@@ -105,10 +105,6 @@ function generateClientClass(string $namespace, string $className, ?string $auth
 ";
     }
 
-    // Credentials are promoted constructor properties on purpose: authentication()
-    // is called from parent::__construct(), and promoted properties are assigned
-    // before the parent constructor body runs. Assigning them afterwards would
-    // fail with "must not be accessed before initialization".
     $constructor = <<<CTOR
 
     public function __construct(

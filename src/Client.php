@@ -20,11 +20,19 @@ abstract class Client implements ClientContract
 {
     private readonly Builder $builder;
 
+    private bool $pluginsAdded = false;
+
     private ?Response $lastResponse = null;
 
     /**
      * Pass a builder to control the transport; omit it and one is assembled
      * from whatever PSR-18 client and PSR-17 factories are installed.
+     *
+     * The builder is copied, so the one passed in is never mutated and can be
+     * reused across several clients. The client's own default plugins are added
+     * to the copy on the first request, not here — so credentials and other
+     * properties this client reads may be assigned anywhere in the constructor.
+     *
      * @param string $url
      * @param ?Builder $builder
      */
@@ -32,19 +40,7 @@ abstract class Client implements ClientContract
         protected readonly string $url,
         ?Builder $builder = null,
     ) {
-        $this->builder = $builder ?? new Builder();
-
-        if ($this->defaultHeaders() !== []) {
-            $this->builder->addPlugin(new HeaderDefaultsPlugin($this->defaultHeaders()));
-        }
-
-        if ($this instanceof AuthenticationContract) {
-            $this->builder->addPlugin(new AuthenticationPlugin($this->authentication()));
-        }
-
-        foreach ($this->defaultPlugins() as $plugin) {
-            $this->builder->addPlugin($plugin);
-        }
+        $this->builder = clone ($builder ?? new Builder());
     }
 
     /**
@@ -68,7 +64,7 @@ abstract class Client implements ClientContract
         object|array|string|null $body = null,
         array $headers = [],
     ): Response {
-        $request = $this->builder->getRequestFactory()->createRequest(
+        $request = $this->builder()->getRequestFactory()->createRequest(
             $method->value,
             $this->url() . '/' . ltrim($uri, '/'),
         );
@@ -81,7 +77,7 @@ abstract class Client implements ClientContract
 
         if ($body !== null) {
             $request = $request->withBody(
-                $this->builder->getStreamFactory()->createStream($this->encodeBody($body)),
+                $this->builder()->getStreamFactory()->createStream($this->encodeBody($body)),
             );
         }
 
@@ -94,14 +90,35 @@ abstract class Client implements ClientContract
         // though it were this one; the field is set again only on success.
         $this->lastResponse = null;
 
-        return $this->lastResponse = new Response($this->builder->getHttpClient()->sendRequest($request));
+        return $this->lastResponse = new Response($this->builder()->getHttpClient()->sendRequest($request));
     }
 
     /**
      * The transport, for adding plugins after construction.
+     *
+     * The client's own default plugins (default headers, authentication and
+     * {@see defaultPlugins()}) are added the first time this is called, after
+     * any already on the injected builder. A consumer can still remove them
+     * afterwards, since removal also goes through the builder this returns.
      */
     public function builder(): Builder
     {
+        if (! $this->pluginsAdded) {
+            $this->pluginsAdded = true;
+
+            if ($this->defaultHeaders() !== []) {
+                $this->builder->addPlugin(new HeaderDefaultsPlugin($this->defaultHeaders()));
+            }
+
+            if ($this instanceof AuthenticationContract) {
+                $this->builder->addPlugin(new AuthenticationPlugin($this->authentication()));
+            }
+
+            foreach ($this->defaultPlugins() as $plugin) {
+                $this->builder->addPlugin($plugin);
+            }
+        }
+
         return $this->builder;
     }
 
