@@ -22,7 +22,7 @@ use Psr\Http\Message\UriFactoryInterface;
  * logging, retries, caching.
  *
  * Every collaborator is optional and falls back to discovery, so a bare
- * `new Builder()` works, and tests can inject a mock transport instead.
+ * `new Builder()` works, and tests can inject a mock Transport instead.
  */
 final class Builder
 {
@@ -52,7 +52,7 @@ final class Builder
     }
 
     /**
-     * The transport with every plugin applied, built once and reused.
+     * The Transport with every plugin applied, built once and reused.
      */
     public function getHttpClient(): ClientInterface
     {
