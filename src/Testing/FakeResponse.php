@@ -23,8 +23,8 @@ final class FakeResponse
      * is set unless `$headers` already names a Content-Type of its own.
      *
      * @param array<mixed, mixed>   $body
+     * @param int                   $status
      * @param array<string, string> $headers
-     * @param int $status
      *
      * @throws \JsonException
      */
@@ -40,9 +40,9 @@ final class FakeResponse
     /**
      * A response with just a status and, optionally, a raw body.
      *
+     * @param int                   $status
+     * @param string                $body
      * @param array<string, string> $headers
-     * @param int $status
-     * @param string $body
      */
     public static function status(int $status, string $body = '', array $headers = []): ResponseInterface
     {

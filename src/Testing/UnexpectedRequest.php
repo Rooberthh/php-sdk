@@ -20,8 +20,8 @@ use Rooberthh\Sdk\Exceptions\SdkException;
 final class UnexpectedRequest extends LogicException implements SdkException, ClientExceptionInterface
 {
     /**
-     * @param list<string> $keys the fakes that were registered, for the message
      * @param RequestInterface $request
+     * @param list<string>     $keys    the fakes that were registered, for the message
      */
     public static function for(RequestInterface $request, array $keys): self
     {
