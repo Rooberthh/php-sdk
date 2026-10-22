@@ -100,7 +100,7 @@ it('can be read more than once even when the body cannot rewind', function () {
         ->and($response->body())->toBe('{"id":1,"name":"A","desc":"x"}');
 });
 
-it('can build a dto and still read the body afterwards', function () {
+it('can build a data object and still read the body afterwards', function () {
     $response = new Response(new Psr7Response(200, [], new NonSeekableStream('{"id":7,"name":"A","desc":"x"}')));
 
     expect($response->dataObject(TestDataObject::class)->id)->toBe(7)
