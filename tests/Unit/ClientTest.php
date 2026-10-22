@@ -14,6 +14,7 @@ use Rooberthh\Sdk\Response;
 use Rooberthh\Sdk\Tests\SdkTestCase;
 use Rooberthh\Sdk\Tests\Stubs\AuthenticatedSDK;
 use Rooberthh\Sdk\Tests\Stubs\MockSDK;
+use Rooberthh\Sdk\Tests\Stubs\NonSeekableStream;
 
 uses(SdkTestCase::class);
 
@@ -123,6 +124,25 @@ it('remembers the last response after a call that returned data objects', functi
         ->and($client->getLastResponse()?->status())->toBe(200)
         ->and($client->getLastResponse()?->header('Link'))
         ->toBe('<https://api.mock.com/test?page=2>; rel="next"');
+});
+
+it('keeps the last response readable after a read-once body was consumed', function () {
+    $mock = new MockClient();
+    $mock->addResponse(new Psr7Response(200, [], new NonSeekableStream('[{"id":1,"name":"a","desc":"b"}]')));
+
+    $client = new MockSDK(url: 'https://api.mock.com', builder: new Builder($mock));
+
+    $client->tests()->list();
+
+    expect($client->getLastResponse()?->json())->toBe([['id' => 1, 'name' => 'a', 'desc' => 'b']]);
+});
+
+it('returns the same response instance that send() returned', function () {
+    [$client] = wired();
+
+    $sent = $client->send(get());
+
+    expect($client->getLastResponse())->toBe($sent);
 });
 
 it('reports no last response when the request failed', function () {
