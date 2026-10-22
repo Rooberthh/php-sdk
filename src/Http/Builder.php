@@ -14,15 +14,15 @@ use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Http\Message\UriFactoryInterface;
 
 /**
- * Assembles the HTTP client an SDK sends through.
+ * Assembles the Transport an SDK sends through.
  *
- * Plugins can be added and removed at any point; the composed client is built
+ * Plugins can be added and removed at any point; the composed Transport is built
  * on first use and rebuilt whenever the plugin list changes. This is the seam
  * for anything that needs to sit between the SDK and the network — recording,
  * logging, retries, caching.
  *
  * Every collaborator is optional and falls back to discovery, so a bare
- * `new Builder()` works, and tests can inject a mock transport instead.
+ * `new Builder()` works, and tests can inject a mock Transport instead.
  */
 final class Builder
 {
@@ -52,7 +52,7 @@ final class Builder
     }
 
     /**
-     * The transport with every plugin applied, built once and reused.
+     * The Transport with every plugin applied, built once and reused.
      */
     public function getHttpClient(): ClientInterface
     {
