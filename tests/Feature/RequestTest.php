@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Rooberthh\Sdk\Tests\Feature;
 
-use Http\Mock\Client as MockClient;
+use Http\Mock\Client as MockTransport;
 use Nyholm\Psr7\Response;
 use Rooberthh\HttpTools\Enums\Method;
 use Rooberthh\Sdk\Http\Builder;
 use Rooberthh\Sdk\Tests\SdkTestCase;
 use Rooberthh\Sdk\Tests\Stubs\Enums\Status;
-use Rooberthh\Sdk\Tests\Stubs\MockSDK;
+use Rooberthh\Sdk\Tests\Stubs\MockClient;
 use Rooberthh\Sdk\Tests\Stubs\Payloads\CreateTestLinePayload;
 use Rooberthh\Sdk\Tests\Stubs\Payloads\CreateTestPayload;
 
@@ -20,14 +20,14 @@ uses(SdkTestCase::class);
  * A client over a mock transport, plus the mock it records on.
  *
  * @param string $url
- * @return array{0: MockSDK, 1: MockClient}
+ * @return array{0: MockClient, 1: MockTransport}
  */
 function overMock(string $url = 'https://api.mock.com'): array
 {
-    $mock = new MockClient();
+    $mock = new MockTransport();
     $mock->addResponse(new Response(200, [], '{}'));
 
-    return [new MockSDK(url: $url, builder: new Builder($mock)), $mock];
+    return [new MockClient(url: $url, builder: new Builder($mock)), $mock];
 }
 
 it('joins a uri with a leading slash onto the base url', function () {

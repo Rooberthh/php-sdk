@@ -5,15 +5,15 @@ declare(strict_types=1);
 use Http\Client\Common\Plugin\HeaderSetPlugin;
 use Http\Client\Common\Plugin\RedirectPlugin;
 use Http\Client\Exception\NetworkException;
-use Http\Mock\Client as MockClient;
+use Http\Mock\Client as MockTransport;
 use Nyholm\Psr7\Request;
 use Nyholm\Psr7\Response as Psr7Response;
 use Rooberthh\Sdk\Contracts\ClientContract;
 use Rooberthh\Sdk\Http\Builder;
 use Rooberthh\Sdk\Response;
 use Rooberthh\Sdk\Tests\SdkTestCase;
-use Rooberthh\Sdk\Tests\Stubs\AuthenticatedSDK;
-use Rooberthh\Sdk\Tests\Stubs\MockSDK;
+use Rooberthh\Sdk\Tests\Stubs\AuthenticatedClient;
+use Rooberthh\Sdk\Tests\Stubs\MockClient;
 use Rooberthh\Sdk\Tests\Stubs\NonSeekableStream;
 
 uses(SdkTestCase::class);
@@ -24,11 +24,11 @@ uses(SdkTestCase::class);
  *
  * @param string $class
  * @param int $responses
- * @return array{0: AuthenticatedSDK|MockSDK, 1: MockClient}
+ * @return array{0: AuthenticatedClient|MockClient, 1: MockTransport}
  */
-function wired(string $class = MockSDK::class, int $responses = 1): array
+function wired(string $class = MockClient::class, int $responses = 1): array
 {
-    $mock = new MockClient();
+    $mock = new MockTransport();
 
     for ($i = 0; $i < $responses; $i++) {
         $mock->addResponse(new Psr7Response(200, [], '{}'));
@@ -60,7 +60,7 @@ it('sends the default headers', function () {
 });
 
 it('sends the authentication the client declares', function () {
-    [$client, $mock] = wired(AuthenticatedSDK::class);
+    [$client, $mock] = wired(AuthenticatedClient::class);
 
     $client->send(get());
 
@@ -108,14 +108,14 @@ it('has no last response before anything is sent', function () {
 });
 
 it('remembers the last response after a call that returned data objects', function () {
-    $mock = new MockClient();
+    $mock = new MockTransport();
     $mock->addResponse(new Psr7Response(
         200,
         ['Link' => '<https://api.mock.com/test?page=2>; rel="next"'],
         '[{"id":1,"name":"A","desc":"x"}]',
     ));
 
-    $client = new MockSDK(url: 'https://api.mock.com', builder: new Builder($mock));
+    $client = new MockClient(url: 'https://api.mock.com', builder: new Builder($mock));
 
     $objects = $client->tests()->list();
 
@@ -127,10 +127,10 @@ it('remembers the last response after a call that returned data objects', functi
 });
 
 it('keeps the last response readable after a read-once body was consumed', function () {
-    $mock = new MockClient();
+    $mock = new MockTransport();
     $mock->addResponse(new Psr7Response(200, [], new NonSeekableStream('[{"id":1,"name":"a","desc":"b"}]')));
 
-    $client = new MockSDK(url: 'https://api.mock.com', builder: new Builder($mock));
+    $client = new MockClient(url: 'https://api.mock.com', builder: new Builder($mock));
 
     $client->tests()->list();
 
@@ -146,10 +146,10 @@ it('returns the same response instance that send() returned', function () {
 });
 
 it('reports no last response when the request failed', function () {
-    $mock = new MockClient();
+    $mock = new MockTransport();
     $mock->addResponse(new Psr7Response(200, [], '{}'));
 
-    $client = new MockSDK(url: 'https://api.mock.com', builder: new Builder($mock));
+    $client = new MockClient(url: 'https://api.mock.com', builder: new Builder($mock));
     $client->send(get());
     expect($client->getLastResponse())->not->toBeNull();
 

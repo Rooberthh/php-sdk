@@ -7,7 +7,7 @@ namespace Rooberthh\Sdk\Tests\Stubs;
 use Rooberthh\Sdk\Client;
 use Rooberthh\Sdk\Tests\Stubs\Resources\TestResource;
 
-class MockSDK extends Client
+class MockClient extends Client
 {
     public function tests(): TestResource
     {
