@@ -103,23 +103,35 @@ abstract class Client implements ClientContract
      */
     public function builder(): Builder
     {
-        if (! $this->pluginsAdded) {
-            $this->pluginsAdded = true;
-
-            if ($this->defaultHeaders() !== []) {
-                $this->builder->addPlugin(new HeaderDefaultsPlugin($this->defaultHeaders()));
-            }
-
-            if ($this instanceof AuthenticationContract) {
-                $this->builder->addPlugin(new AuthenticationPlugin($this->authentication()));
-            }
-
-            foreach ($this->defaultPlugins() as $plugin) {
-                $this->builder->addPlugin($plugin);
-            }
-        }
+        $this->addDefaultPlugins();
 
         return $this->builder;
+    }
+
+    /**
+     * Add this client's default plugins to the builder, once. Guarded so the
+     * first call installs them and later calls are a no-op, which keeps the
+     * installation lazy without re-adding plugins on every request.
+     */
+    private function addDefaultPlugins(): void
+    {
+        if ($this->pluginsAdded) {
+            return;
+        }
+
+        $this->pluginsAdded = true;
+
+        if ($this->defaultHeaders() !== []) {
+            $this->builder->addPlugin(new HeaderDefaultsPlugin($this->defaultHeaders()));
+        }
+
+        if ($this instanceof AuthenticationContract) {
+            $this->builder->addPlugin(new AuthenticationPlugin($this->authentication()));
+        }
+
+        foreach ($this->defaultPlugins() as $plugin) {
+            $this->builder->addPlugin($plugin);
+        }
     }
 
     /**
