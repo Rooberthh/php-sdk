@@ -252,6 +252,9 @@ try {
 Everything else only reports failure: `failed()`, `successful()`, `status()`,
 `json()`, `body()` and the header methods never throw on a failed response.
 
+To throw your own exception rather than `RequestFailed`, see
+[Your own exceptions](#your-own-exceptions).
+
 ### Query parameters
 
 The `query` argument adds query-string parameters to the request. Null values
@@ -412,6 +415,29 @@ class MyApiClient extends Client implements AuthenticationContract
     }
 }
 ```
+
+### Your own exceptions
+
+By default a failed request throws `RequestFailed`. Override `exceptionFor()` in
+your client to map a failed response to your own exception instead. It is
+consulted only when a failed response is about to throw — through `throw()` and
+the Data Object methods — never for a successful one. Return `null` for a status
+you do not handle, and `RequestFailed` is thrown as before:
+
+```php
+protected function exceptionFor(Response $response): ?Throwable
+{
+    return match ($response->status()) {
+        404     => new NotFound($response),
+        422     => ValidationFailed::from($response->json('errors', [])),
+        default => null,
+    };
+}
+```
+
+Have your exceptions implement `Rooberthh\Sdk\Exceptions\SdkException` and
+Consumers can catch everything the SDK throws — yours and `RequestFailed` — with
+a single catch.
 
 ## Special Thanks
 

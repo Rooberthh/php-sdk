@@ -15,6 +15,8 @@ use Rooberthh\Sdk\Contracts\AuthenticationContract;
 use Rooberthh\Sdk\Contracts\ClientContract;
 use Rooberthh\Sdk\Http\Builder;
 use Http\Client\Common\Plugin;
+use Throwable;
+use Rooberthh\Sdk\Exceptions\RequestFailed;
 
 abstract class Client implements ClientContract
 {
@@ -90,7 +92,10 @@ abstract class Client implements ClientContract
         // though it were this one; the field is set again only on success.
         $this->lastResponse = null;
 
-        return $this->lastResponse = new Response($this->builder()->getHttpClient()->sendRequest($request));
+        return $this->lastResponse = new Response(
+            $this->builder()->getHttpClient()->sendRequest($request),
+            $this->exceptionFor(...),
+        );
     }
 
     /**
@@ -159,6 +164,22 @@ abstract class Client implements ClientContract
     protected function defaultPlugins(): array
     {
         return [];
+    }
+
+    /**
+     * The exception to throw for a failed response, or null to throw
+     * {@see RequestFailed}.
+     *
+     * A hook for subclasses — like {@see defaultHeaders()}, it is not part of
+     * {@see ClientContract}. Consulted by {@see Response::throw()} (and so by
+     * the Data Object methods) only when a failed response is about to throw,
+     * never for a successful one.
+     *
+     * @param Response $response
+     */
+    protected function exceptionFor(Response $response): ?Throwable
+    {
+        return null;
     }
 
     /**

@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Rooberthh\Sdk;
 
+use Closure;
 use JsonException;
 use Psr\Http\Message\ResponseInterface;
+use Throwable;
 use Rooberthh\Sdk\Contracts\DataObjectContract;
 use Rooberthh\Sdk\Exceptions\RequestFailed;
 use Rooberthh\Sdk\Exceptions\UnableToReadResponse;
@@ -29,8 +31,15 @@ final class Response
     /** @var null|array<mixed, mixed> */
     private ?array $decoded = null;
 
+    /**
+     * @param ResponseInterface                   $response
+     * @param null|Closure(Response): ?Throwable $exceptionFor maps a failed
+     *        response to the exception to throw, or returns null to fall back
+     *        to {@see RequestFailed}. Consulted only for a failed response.
+     */
     public function __construct(
         private readonly ResponseInterface $response,
+        private readonly ?Closure $exceptionFor = null,
     ) {}
 
     /**
@@ -136,15 +145,32 @@ final class Response
     /**
      * Throw if the request failed. Opt-in: nothing throws unless you ask.
      *
-     * @throws RequestFailed
+     * The exception is the client's own when its `exceptionFor` hook maps this
+     * response to one; otherwise it is {@see RequestFailed}.
+     *
+     * @throws Throwable
      */
     public function throw(): self
     {
         if ($this->failed()) {
-            throw RequestFailed::with($this);
+            throw $this->failure();
         }
 
         return $this;
+    }
+
+    /**
+     * The exception for a failed response: the one the client's `exceptionFor`
+     * hook returns, or {@see RequestFailed} when there is no hook or it hands
+     * back null.
+     */
+    private function failure(): Throwable
+    {
+        $mapped = $this->exceptionFor !== null
+            ? ($this->exceptionFor)($this)
+            : null;
+
+        return $mapped ?? RequestFailed::with($this);
     }
 
     /**

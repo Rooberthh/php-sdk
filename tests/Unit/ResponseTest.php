@@ -10,6 +10,8 @@ use Rooberthh\Sdk\Response;
 use Rooberthh\Sdk\Tests\Stubs\DataObjects\TestDataObject;
 use Rooberthh\Sdk\Tests\Stubs\NonSeekableStream;
 use Psr\Http\Message\ResponseInterface;
+use RuntimeException;
+use Throwable;
 
 function response(int $status = 200, string $body = '{}', array $headers = []): Response
 {
@@ -52,6 +54,36 @@ it('only throws when asked to', function () {
 
     expect(fn() => response(404, 'Not Found')->throw())
         ->toThrow(RequestFailed::class, 'The API responded with 404');
+});
+
+it('throws the exception the mapping closure returns for a failed response', function () {
+    $mapped = new RuntimeException('mapped');
+
+    $response = new Response(new Psr7Response(404, [], 'Not Found'), fn(): Throwable => $mapped);
+
+    expect(fn() => $response->throw())->toThrow($mapped);
+});
+
+it('falls back to RequestFailed when the mapping closure returns null', function () {
+    $response = new Response(new Psr7Response(500, [], 'boom'), fn(): ?Throwable => null);
+
+    expect(fn() => $response->throw())->toThrow(RequestFailed::class);
+});
+
+it('throws RequestFailed when constructed without a mapping closure', function () {
+    expect(fn() => (new Response(new Psr7Response(404, [], 'Not Found')))->throw())
+        ->toThrow(RequestFailed::class);
+});
+
+it('never consults the mapping closure for a successful response', function () {
+    $response = new Response(
+        new Psr7Response(200, [], '{"id":1,"name":"A","desc":"x"}'),
+        function (): Throwable {
+            throw new RuntimeException('the hook should not run for a 2xx response');
+        },
+    );
+
+    expect($response->dataObject(TestDataObject::class)->id)->toBe(1);
 });
 
 it('returns itself when throw is called on a successful response', function () {

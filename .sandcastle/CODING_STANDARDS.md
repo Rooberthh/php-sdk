@@ -32,3 +32,4 @@
 - Data objects implement `DataObjectContract` and hydrate through `CanCreateInstances`: snake_case response keys map to camelCase properties, and unknown keys are ignored so new API fields aren't breaking changes.
 - Wrap PSR-7/17/18 objects rather than replace them, and keep the original reachable (e.g. `Response::psr()`).
 - Don't decide on the caller's behalf: a failed response is reported (`failed()`), not thrown, unless the caller asks (`throw()`) or asks for Data Objects (`dataObject()`, `dataObjects()`, `paginated()`), which assert success.
+- SDK-author hooks are `protected` methods on `Client` with a null/empty default (`defaultHeaders()`, `defaultPlugins()`, `exceptionFor()`), not added to `ClientContract`. `exceptionFor(Response): ?Throwable` maps a failed response to the SDK's own exception; it is consulted only when a failed response is about to throw, never for a 2xx one.
