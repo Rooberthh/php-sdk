@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Http\Client\Common\Plugin\AuthenticationPlugin;
 use Http\Client\Common\Plugin\HeaderSetPlugin;
 use Http\Client\Common\Plugin\RedirectPlugin;
 use Http\Client\Exception\NetworkException;
@@ -13,6 +14,8 @@ use Rooberthh\Sdk\Http\Builder;
 use Rooberthh\Sdk\Response;
 use Rooberthh\Sdk\Tests\SdkTestCase;
 use Rooberthh\Sdk\Tests\Stubs\AuthenticatedClient;
+use Rooberthh\Sdk\Tests\Stubs\LateAuthenticatedClient;
+use Rooberthh\Sdk\Tests\Stubs\LateHeaderClient;
 use Rooberthh\Sdk\Tests\Stubs\MockClient;
 use Rooberthh\Sdk\Tests\Stubs\NonSeekableStream;
 
@@ -143,6 +146,68 @@ it('returns the same response instance that send() returned', function () {
     $sent = $client->send(get());
 
     expect($client->getLastResponse())->toBe($sent);
+});
+
+it('does not leak credentials between clients sharing a builder', function () {
+    $mock = new MockTransport();
+    $mock->addResponse(new Psr7Response(200, [], '{}'));
+    $mock->addResponse(new Psr7Response(200, [], '{}'));
+
+    $builder = new Builder($mock);
+
+    $a = new LateAuthenticatedClient(url: 'https://api.mock.com', token: 'token-a', builder: $builder);
+    $b = new LateAuthenticatedClient(url: 'https://api.mock.com', token: 'token-b', builder: $builder);
+
+    $a->send(get());
+    $b->send(get());
+
+    expect($mock->getRequests()[0]->getHeaderLine('Authorization'))->toBe('Bearer token-a')
+        ->and($mock->getRequests()[1]->getHeaderLine('Authorization'))->toBe('Bearer token-b');
+});
+
+it('is unaffected by plugins added to the original builder after construction', function () {
+    $mock = new MockTransport();
+    $mock->addResponse(new Psr7Response(200, [], '{}'));
+
+    $builder = new Builder($mock);
+    $client = new MockClient(url: 'https://api.mock.com', builder: $builder);
+
+    $builder->addPlugin(new HeaderSetPlugin(['X-Trace' => 'abc']));
+
+    $client->send(get());
+
+    expect($mock->getRequests()[0]->hasHeader('X-Trace'))->toBeFalse();
+});
+
+it('sends authentication assigned after parent::__construct()', function () {
+    $mock = new MockTransport();
+    $mock->addResponse(new Psr7Response(200, [], '{}'));
+
+    $client = new LateAuthenticatedClient(url: 'https://api.mock.com', token: 'late-token', builder: new Builder($mock));
+
+    $client->send(get());
+
+    expect($mock->getRequests()[0]->getHeaderLine('Authorization'))->toBe('Bearer late-token');
+});
+
+it('reads default headers from a property assigned after parent::__construct()', function () {
+    $mock = new MockTransport();
+    $mock->addResponse(new Psr7Response(200, [], '{}'));
+
+    $client = new LateHeaderClient(url: 'https://api.mock.com', apiVersion: '2024-01', builder: new Builder($mock));
+
+    $client->send(get());
+
+    expect($mock->getRequests()[0]->getHeaderLine('X-Api-Version'))->toBe('2024-01');
+});
+
+it('leaves out authentication when its plugin is removed before the first request', function () {
+    [$client, $mock] = wired(AuthenticatedClient::class);
+
+    $client->builder()->removePlugin(AuthenticationPlugin::class);
+    $client->send(get());
+
+    expect($mock->getRequests()[0]->hasHeader('Authorization'))->toBeFalse();
 });
 
 it('reports no last response when the request failed', function () {

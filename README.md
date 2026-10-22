@@ -69,11 +69,6 @@ class MyApiClient extends Client implements AuthenticationContract
 }
 ```
 
-Credentials are promoted constructor properties on purpose. `authentication()`
-is called from `parent::__construct()`, and promoted properties are assigned
-before the parent constructor body runs — assigning them afterwards fails with
-*"must not be accessed before initialization"*.
-
 ### Using Your Generated SDK
 
 ```php
@@ -103,7 +98,8 @@ $client = new MyApi\MyApiClient(
 
 Implement `AuthenticationContract` and the credentials it returns are applied to
 every request — the client wires it up in its constructor, so there is no
-separate setup step.
+separate setup step. `authentication()` is called on the first request, so
+credentials can be assigned anywhere in the constructor.
 
 #### Bearer Token
 
@@ -304,7 +300,9 @@ per RFC 3986, so spaces become `%20` rather than `+`.
 ### The Transport
 
 Every request passes through a plugin chain held by a `Builder`. Plugins can be
-added and removed at any point, and the Transport is rebuilt on the next request:
+added and removed at any point, and the Transport is rebuilt on the next request.
+The builder passed in is copied, so one `Builder` can safely be reused across
+several clients:
 
 ```php
 use Http\Client\Common\Plugin\RetryPlugin;
