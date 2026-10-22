@@ -292,7 +292,7 @@ per RFC 3986, so spaces become `%20` rather than `+`.
 ### The transport
 
 Every request passes through a plugin chain held by a `Builder`. Plugins can be
-added and removed at any point, and the client is rebuilt on the next request:
+added and removed at any point, and the Transport is rebuilt on the next request:
 
 ```php
 use Http\Client\Common\Plugin\RetryPlugin;
