@@ -16,9 +16,11 @@ use Rooberthh\Sdk\Support\Arr;
  * What the client hands back from a request.
  *
  * This wraps the PSR-7 response rather than replacing it — {@see self::psr()}
- * gives the original back, untouched. Nothing here decides anything on your
- * behalf: a failed request is reported by {@see self::failed()}, not thrown,
- * and data objects are built only if you ask for them.
+ * gives the original back, untouched. A failed request is reported by
+ * {@see self::failed()}, not thrown, unless you ask for it to be thrown
+ * ({@see self::throw()}) or ask for a Data Object ({@see self::dataObject()},
+ * {@see self::dataObjects()}, {@see self::paginated()}), which only a
+ * successful response can provide.
  */
 final class Response
 {
@@ -151,14 +153,22 @@ final class Response
      * Pass a key for APIs that wrap their responses — `dataObject(Order::class,
      * 'data')` reads `{"data": {...}}`.
      *
+     * Asking for a Data Object asserts the request succeeded: a failed response
+     * is thrown as {@see RequestFailed} before the body is read, so the error is
+     * the failed status rather than whatever the error body failed to map to.
+     *
      * @template T of DataObjectContract
      *
      * @param  class-string<T> $class
      * @param null|int|string $key
+     *
+     * @throws RequestFailed when the response did not come back 2xx
      * @return T
      */
     public function dataObject(string $class, string|int|null $key = null): DataObjectContract
     {
+        $this->throw();
+
         return $class::make($this->section($key));
     }
 
@@ -169,14 +179,21 @@ final class Response
      * 'data')` reads the rows out of `{"data": [...], "meta": {...}}`. Without
      * one, the body itself must be the list.
      *
+     * Asking for Data Objects asserts the request succeeded: a failed response
+     * is thrown as {@see RequestFailed} before the body is read.
+     *
      * @template T of DataObjectContract
      *
      * @param  class-string<T> $class
      * @param null|int|string $key
+     *
+     * @throws RequestFailed when the response did not come back 2xx
      * @return list<T>
      */
     public function dataObjects(string $class, string|int|null $key = null): array
     {
+        $this->throw();
+
         return array_map(
             static fn(mixed $data): DataObjectContract => $class::make((array) $data),
             array_values($this->section($key)),
@@ -186,11 +203,16 @@ final class Response
     /**
      * One page of results, with whatever the API said about where it sits.
      *
+     * Asking for a page asserts the request succeeded: a failed response is
+     * thrown as {@see RequestFailed} before the body is read.
+     *
      * @template T of DataObjectContract
      *
      * @param  class-string<T> $class
      * @param string $dataKey
      * @param string $metaKey
+     *
+     * @throws RequestFailed when the response did not come back 2xx
      * @return PaginatedResponse<T>
      */
     public function paginated(
@@ -198,6 +220,8 @@ final class Response
         string $dataKey = 'data',
         string $metaKey = 'meta',
     ): PaginatedResponse {
+        $this->throw();
+
         $meta = $this->json($metaKey);
 
         return new PaginatedResponse(
