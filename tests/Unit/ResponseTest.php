@@ -98,17 +98,6 @@ it('throws the failed request rather than build a list of data objects', functio
     }
 });
 
-it('throws the failed request rather than build a page', function () {
-    $response = response(404, '{"message":"Not found"}');
-
-    try {
-        $response->paginated(TestDataObject::class);
-        $this->fail('Expected RequestFailed to be thrown.');
-    } catch (RequestFailed $exception) {
-        expect($exception->getMessage())->toContain('404')
-            ->and($exception->response)->toBe($response);
-    }
-});
 
 it('throws the failed request rather than fail to read a non-json error page', function () {
     expect(fn() => response(500, '<html>oops</html>')->dataObject(TestDataObject::class))
@@ -170,56 +159,4 @@ it('reads a list out of an envelope', function () {
 it('says which keys are there when the one you asked for is not', function () {
     expect(fn() => response(body: '{"result":[],"meta":{}}')->dataObjects(TestDataObject::class, 'data'))
         ->toThrow(UnableToReadResponse::class, 'The API response has no [data] to read. It contains: result, meta.');
-});
-
-it('builds a page of results with its meta', function () {
-    $page = response(body: '{
-        "data": [{"id":1,"name":"A","desc":"x"},{"id":2,"name":"B","desc":"y"}],
-        "links": {"first":"...","last":"...","prev":null,"next":"...?page=2"},
-        "meta": {"current_page":1,"from":1,"last_page":5,"path":"/orders","per_page":2,"to":2,"total":10}
-    }')->paginated(TestDataObject::class);
-
-    expect($page)->toHaveCount(2)
-        ->and($page->items[0])->toBeInstanceOf(TestDataObject::class)
-        ->and($page->meta->currentPage)->toBe(1)
-        ->and($page->meta->perPage)->toBe(2)
-        ->and($page->meta->lastPage)->toBe(5)
-        ->and($page->meta->total)->toBe(10)
-        ->and($page->meta->hasMorePages())->toBeTrue()
-        ->and($page->isEmpty())->toBeFalse();
-});
-
-it('can be iterated a page at a time', function () {
-    $page = response(body: '{"data":[{"id":1,"name":"A","desc":"x"}],"meta":{"total":1}}')
-        ->paginated(TestDataObject::class);
-
-    $ids = [];
-
-    foreach ($page as $object) {
-        $ids[] = $object->id;
-    }
-
-    expect($ids)->toBe([1]);
-});
-
-it('copes with a page whose meta says nothing useful', function () {
-    $page = response(body: '{"data":[],"meta":{}}')->paginated(TestDataObject::class);
-
-    expect($page->isEmpty())->toBeTrue()
-        ->and($page->meta->total)->toBeNull()
-        ->and($page->meta->hasMorePages())->toBeNull();
-});
-
-it('knows it is on the last page', function () {
-    $page = response(body: '{"data":[],"meta":{"current_page":5,"last_page":5}}')
-        ->paginated(TestDataObject::class);
-
-    expect($page->meta->hasMorePages())->toBeFalse();
-});
-
-it('falls back to from and to when there are no page numbers', function () {
-    $page = response(body: '{"data":[],"meta":{"from":1,"to":25,"total":120}}')
-        ->paginated(TestDataObject::class);
-
-    expect($page->meta->hasMorePages())->toBeTrue();
 });

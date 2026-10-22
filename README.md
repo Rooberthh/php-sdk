@@ -234,7 +234,7 @@ $this->client->request(
 
 ### Failed requests
 
-The Data Object methods — `dataObject()`, `dataObjects()` and `paginated()` —
+The Data Object methods — `dataObject()` and `dataObjects()` —
 throw `RequestFailed` when the request did not come back 2xx, before they read
 the body. Asking for a Data Object asserts the request succeeded, so a failed
 response surfaces the failed status rather than a mapping or reading error:

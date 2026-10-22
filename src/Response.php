@@ -9,7 +9,6 @@ use Psr\Http\Message\ResponseInterface;
 use Rooberthh\Sdk\Contracts\DataObjectContract;
 use Rooberthh\Sdk\Exceptions\RequestFailed;
 use Rooberthh\Sdk\Exceptions\UnableToReadResponse;
-use Rooberthh\Sdk\Pagination\PageMeta;
 use Rooberthh\Sdk\Support\Arr;
 
 /**
@@ -19,8 +18,7 @@ use Rooberthh\Sdk\Support\Arr;
  * gives the original back, untouched. A failed request is reported by
  * {@see self::failed()}, not thrown, unless you ask for it to be thrown
  * ({@see self::throw()}) or ask for a Data Object ({@see self::dataObject()},
- * {@see self::dataObjects()}, {@see self::paginated()}), which only a
- * successful response can provide.
+ * {@see self::dataObjects()}), which only a successful response can provide.
  */
 final class Response
 {
@@ -197,36 +195,6 @@ final class Response
         return array_map(
             static fn(mixed $data): DataObjectContract => $class::make((array) $data),
             array_values($this->section($key)),
-        );
-    }
-
-    /**
-     * One page of results, with whatever the API said about where it sits.
-     *
-     * Asking for a page asserts the request succeeded: a failed response is
-     * thrown as {@see RequestFailed} before the body is read.
-     *
-     * @template T of DataObjectContract
-     *
-     * @param  class-string<T> $class
-     * @param string $dataKey
-     * @param string $metaKey
-     *
-     * @throws RequestFailed when the response did not come back 2xx
-     * @return PaginatedResponse<T>
-     */
-    public function paginated(
-        string $class,
-        string $dataKey = 'data',
-        string $metaKey = 'meta',
-    ): PaginatedResponse {
-        $this->throw();
-
-        $meta = $this->json($metaKey);
-
-        return new PaginatedResponse(
-            items: $this->dataObjects($class, $dataKey),
-            meta: PageMeta::make(is_array($meta) ? $meta : []),
         );
     }
 
