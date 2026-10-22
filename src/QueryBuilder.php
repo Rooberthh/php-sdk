@@ -14,7 +14,7 @@ use UnitEnum;
 /**
  * @phpstan-consistent-constructor
  */
-class FilterBuilder
+class QueryBuilder
 {
     /** @var array<string, mixed> */
     protected array $filters = [];

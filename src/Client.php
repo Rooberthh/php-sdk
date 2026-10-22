@@ -57,7 +57,7 @@ abstract class Client implements ClientContract
      *
      * @param Method                                 $method
      * @param string                                 $uri
-     * @param array<string, mixed>                   $query   applied with {@see FilterBuilder}; null values are dropped
+     * @param array<string, mixed>                   $query   applied with {@see QueryBuilder}; null values are dropped
      * @param null|array<mixed, mixed>|object|string $body
      * @param array<string, string>                  $headers set on the request; these win over the defaults
      */
@@ -73,7 +73,7 @@ abstract class Client implements ClientContract
             $this->url() . '/' . ltrim($uri, '/'),
         );
 
-        $request = FilterBuilder::for($request)->whereAll($query)->apply();
+        $request = QueryBuilder::for($request)->whereAll($query)->apply();
 
         foreach ($headers as $name => $value) {
             $request = $request->withHeader($name, $value);
