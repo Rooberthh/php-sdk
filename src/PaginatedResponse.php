@@ -15,7 +15,7 @@ use Traversable;
  * One page of results, and where it sits in the whole.
  *
  * This is a single page as the API returned it — iterate it for the rows it
- * holds. To walk every page instead, use a {@see Paginator}.
+ * holds.
  *
  * @template T of DataObjectContract
  *

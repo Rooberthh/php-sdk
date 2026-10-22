@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace Rooberthh\Sdk;
 
+use CuyZ\Valinor\Normalizer\Configurator\NormalizeKeysToSnakeCase;
+use CuyZ\Valinor\Normalizer\Format;
+use CuyZ\Valinor\NormalizerBuilder;
 use Http\Client\Common\Plugin\AuthenticationPlugin;
 use Http\Client\Common\Plugin\HeaderDefaultsPlugin;
 use Psr\Http\Message\RequestInterface;
+use Rooberthh\HttpTools\Enums\Method;
 use Rooberthh\Sdk\Contracts\AuthenticationContract;
 use Rooberthh\Sdk\Contracts\ClientContract;
 use Rooberthh\Sdk\Http\Builder;
@@ -41,6 +45,47 @@ abstract class Client implements ClientContract
         foreach ($this->defaultPlugins() as $plugin) {
             $this->builder->addPlugin($plugin);
         }
+    }
+
+    /**
+     * Build a request to a path on this client's URL and send it.
+     *
+     * The body is encoded by type: an object is normalised to snake_case JSON
+     * with null properties dropped, an array is JSON-encoded as given, a string
+     * is sent raw, and null sends no body. Per-call headers override the
+     * defaults, so a raw body can set its own `Content-Type`.
+     *
+     * @param Method                                 $method
+     * @param string                                 $uri
+     * @param array<string, mixed>                   $query   applied with {@see FilterBuilder}; null values are dropped
+     * @param null|array<mixed, mixed>|object|string $body
+     * @param array<string, string>                  $headers set on the request; these win over the defaults
+     */
+    public function request(
+        Method $method,
+        string $uri,
+        array $query = [],
+        object|array|string|null $body = null,
+        array $headers = [],
+    ): Response {
+        $request = $this->builder->getRequestFactory()->createRequest(
+            $method->value,
+            $this->url() . '/' . ltrim($uri, '/'),
+        );
+
+        $request = FilterBuilder::for($request)->whereAll($query)->apply();
+
+        foreach ($headers as $name => $value) {
+            $request = $request->withHeader($name, $value);
+        }
+
+        if ($body !== null) {
+            $request = $request->withBody(
+                $this->builder->getStreamFactory()->createStream($this->encodeBody($body)),
+            );
+        }
+
+        return $this->send($request);
     }
 
     public function send(RequestInterface $request): Response
@@ -82,7 +127,7 @@ abstract class Client implements ClientContract
      *
      * @return array<int, Plugin>
      */
-    public function defaultPlugins(): array
+    protected function defaultPlugins(): array
     {
         return [];
     }
@@ -90,11 +135,55 @@ abstract class Client implements ClientContract
     /**
      * @return array<string, string>
      */
-    public function defaultHeaders(): array
+    protected function defaultHeaders(): array
     {
         return [
             'Accept'       => 'application/json',
             'Content-Type' => 'application/json',
         ];
+    }
+
+    /**
+     * Encode a body for the wire, chosen by type: an object is normalised to
+     * JSON, an array is JSON-encoded as given, and a string is sent raw.
+     *
+     * @param array<mixed, mixed>|object|string $body
+     */
+    private function encodeBody(object|array|string $body): string
+    {
+        return match (true) {
+            is_string($body) => $body,
+            is_array($body)  => json_encode($body, JSON_THROW_ON_ERROR),
+            default          => json_encode($this->normalise($body), JSON_THROW_ON_ERROR),
+        };
+    }
+
+    /**
+     * Normalise a payload object to an array: camelCase properties become
+     * snake_case keys, and null properties are dropped, so optional fields can
+     * simply be left unset. The normaliser is built from reflection once and
+     * reused, which is worth doing once rather than once per request.
+     *
+     * @param object $payload
+     * @return array<mixed, mixed>
+     */
+    private function normalise(object $payload): array
+    {
+        static $normalizer = null;
+
+        $normalizer ??= (new NormalizerBuilder())
+            ->configureWith(new NormalizeKeysToSnakeCase())
+            ->registerTransformer(
+                static function (object $object, callable $next): mixed {
+                    $normalised = $next();
+
+                    return is_array($normalised)
+                        ? array_filter($normalised, static fn(mixed $value): bool => $value !== null)
+                        : $normalised;
+                },
+            )
+            ->normalizer(Format::array());
+
+        return $normalizer->normalize($payload);
     }
 }
