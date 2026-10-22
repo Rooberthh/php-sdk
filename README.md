@@ -332,8 +332,9 @@ class MyApiClient extends Client implements AuthenticationContract
 
 It returns nothing by default. `ErrorPlugin` is deliberately not included:
 failures are reported by `$response->failed()` and thrown only when you call
-`$response->throw()` or ask for Data Objects. `RetryPlugin` is left out too, since retrying a request
-that is not idempotent is the SDK author's call to make.
+`$response->throw()` or ask for Data Objects. `RetryPlugin` is left out too,
+since retrying a request that is not idempotent is the SDK author's call to
+make.
 
 ### Reading the last response
 
