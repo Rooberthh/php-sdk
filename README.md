@@ -182,28 +182,28 @@ class UserResource
                 'limit' => 10,
             ])
             // Results in: /users?sort=name&order=asc&limit=10
-            ->dtos(UserDataObject::class);
+            ->dataObjects(UserDataObject::class);
     }
 
     public function show(int $id): UserDataObject
     {
         return $this->client
             ->request(Method::GET, "/users/{$id}")
-            ->dto(UserDataObject::class);
+            ->dataObject(UserDataObject::class);
     }
 
     public function create(array $userData): UserDataObject
     {
         return $this->client
             ->request(Method::POST, '/users', body: $userData)
-            ->dto(UserDataObject::class);
+            ->dataObject(UserDataObject::class);
     }
 
     public function update(int $id, array $userData): UserDataObject
     {
         return $this->client
             ->request(Method::PUT, "/users/{$id}", body: $userData)
-            ->dto(UserDataObject::class);
+            ->dataObject(UserDataObject::class);
     }
 
     public function delete(int $id): void

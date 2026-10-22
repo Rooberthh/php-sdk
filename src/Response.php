@@ -60,7 +60,7 @@ final class Response
      * `json('meta.total')` for something nested, `json('data.0.id')` to step
      * into a list. A key that is not there gives back the default rather than
      * throwing, because looking is not the same as asserting: reach for
-     * {@see self::dto()} when the shape is a requirement rather than a guess.
+     * {@see self::dataObject()} when the shape is a requirement rather than a guess.
      *
      * A key is tried whole before it is split, so an API that really does send
      * a "meta.total" key is still readable.
@@ -148,7 +148,7 @@ final class Response
     /**
      * Build a data object from the body.
      *
-     * Pass a key for APIs that wrap their responses — `dto(Order::class,
+     * Pass a key for APIs that wrap their responses — `dataObject(Order::class,
      * 'data')` reads `{"data": {...}}`.
      *
      * @template T of DataObjectContract
@@ -157,7 +157,7 @@ final class Response
      * @param null|int|string $key
      * @return T
      */
-    public function dto(string $class, string|int|null $key = null): DataObjectContract
+    public function dataObject(string $class, string|int|null $key = null): DataObjectContract
     {
         return $class::make($this->section($key));
     }
@@ -165,9 +165,9 @@ final class Response
     /**
      * Build a data object per entry of a list body.
      *
-     * Pass a key for APIs that wrap their lists — `dtos(Order::class, 'data')`
-     * reads the rows out of `{"data": [...], "meta": {...}}`. Without one, the
-     * body itself must be the list.
+     * Pass a key for APIs that wrap their lists — `dataObjects(Order::class,
+     * 'data')` reads the rows out of `{"data": [...], "meta": {...}}`. Without
+     * one, the body itself must be the list.
      *
      * @template T of DataObjectContract
      *
@@ -175,7 +175,7 @@ final class Response
      * @param null|int|string $key
      * @return list<T>
      */
-    public function dtos(string $class, string|int|null $key = null): array
+    public function dataObjects(string $class, string|int|null $key = null): array
     {
         return array_map(
             static fn(mixed $data): DataObjectContract => $class::make((array) $data),
@@ -201,7 +201,7 @@ final class Response
         $meta = $this->json($metaKey);
 
         return new PaginatedResponse(
-            items: $this->dtos($class, $dataKey),
+            items: $this->dataObjects($class, $dataKey),
             meta: PageMeta::make(is_array($meta) ? $meta : []),
         );
     }

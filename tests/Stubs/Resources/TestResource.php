@@ -21,7 +21,7 @@ class TestResource
     {
         return $this->client
             ->request(Method::GET, '/test', query: ['name' => 'asc'])
-            ->dtos(TestDataObject::class);
+            ->dataObjects(TestDataObject::class);
     }
 
     /**
@@ -31,7 +31,7 @@ class TestResource
     {
         return $this->client
             ->request(Method::GET, '/test')
-            ->dtos(NestedDataObject::class);
+            ->dataObjects(NestedDataObject::class);
     }
 
     public function store(object $payload): Response

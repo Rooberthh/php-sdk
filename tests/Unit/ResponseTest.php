@@ -76,7 +76,7 @@ it('explains itself when the body is not json', function () {
 
 it('builds a data object from the body', function () {
     $object = response(body: '{"id":1,"name":"Test","desc":"A card."}')
-        ->dto(TestDataObject::class);
+        ->dataObject(TestDataObject::class);
 
     expect($object)->toBeInstanceOf(TestDataObject::class)
         ->id->toBe(1);
@@ -84,7 +84,7 @@ it('builds a data object from the body', function () {
 
 it('builds a data object per entry of a list body', function () {
     $objects = response(body: '[{"id":1,"name":"A","desc":"x"},{"id":2,"name":"B","desc":"y"}]')
-        ->dtos(TestDataObject::class);
+        ->dataObjects(TestDataObject::class);
 
     expect($objects)->toHaveCount(2)
         ->and($objects[1])->toBeInstanceOf(TestDataObject::class)
@@ -103,27 +103,27 @@ it('can be read more than once even when the body cannot rewind', function () {
 it('can build a dto and still read the body afterwards', function () {
     $response = new Response(new Psr7Response(200, [], new NonSeekableStream('{"id":7,"name":"A","desc":"x"}')));
 
-    expect($response->dto(TestDataObject::class)->id)->toBe(7)
+    expect($response->dataObject(TestDataObject::class)->id)->toBe(7)
         ->and($response->json()['id'])->toBe(7);
 });
 
 it('reads a data object out of an envelope', function () {
     $object = response(body: '{"data":{"id":1,"name":"Test","desc":"A card."}}')
-        ->dto(TestDataObject::class, 'data');
+        ->dataObject(TestDataObject::class, 'data');
 
     expect($object->id)->toBe(1);
 });
 
 it('reads a list out of an envelope', function () {
     $objects = response(body: '{"data":[{"id":1,"name":"A","desc":"x"},{"id":2,"name":"B","desc":"y"}],"meta":{"total":2}}')
-        ->dtos(TestDataObject::class, 'data');
+        ->dataObjects(TestDataObject::class, 'data');
 
     expect($objects)->toHaveCount(2)
         ->and($objects[1]->name)->toBe('B');
 });
 
 it('says which keys are there when the one you asked for is not', function () {
-    expect(fn() => response(body: '{"result":[],"meta":{}}')->dtos(TestDataObject::class, 'data'))
+    expect(fn() => response(body: '{"result":[],"meta":{}}')->dataObjects(TestDataObject::class, 'data'))
         ->toThrow(UnableToReadResponse::class, 'The API response has no [data] to read. It contains: result, meta.');
 });
 
