@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Nyholm\Psr7\Factory\Psr17Factory;
-use Rooberthh\Sdk\FilterBuilder;
+use Rooberthh\Sdk\QueryBuilder;
 use Rooberthh\Sdk\Tests\Stubs\Enums\Status;
 
 beforeEach(function () {
@@ -12,7 +12,7 @@ beforeEach(function () {
 });
 
 it('can add multiple filters to a request', function () {
-    $builder = FilterBuilder::for($this->request)
+    $builder = QueryBuilder::for($this->request)
         ->where('status', 'active')
         ->where('role', 'admin')
         ->where('page', 1);
@@ -25,14 +25,14 @@ it('can add multiple filters to a request', function () {
 });
 
 it('can add many filters at once', function () {
-    $builder = FilterBuilder::for($this->request)
+    $builder = QueryBuilder::for($this->request)
         ->whereAll(['status' => 'active', 'page' => 2]);
 
     expect($builder->toQueryString())->toBe('status=active&page=2');
 });
 
 it('applies filters to request query string', function () {
-    $request = FilterBuilder::for($this->request)
+    $request = QueryBuilder::for($this->request)
         ->where('status', 'active')
         ->where('page', 2)
         ->apply();
@@ -41,7 +41,7 @@ it('applies filters to request query string', function () {
 });
 
 it('returns filters array via getFilters', function () {
-    $builder = FilterBuilder::for($this->request)
+    $builder = QueryBuilder::for($this->request)
         ->where('foo', 'bar');
 
     expect($builder->getFilters())
@@ -52,7 +52,7 @@ it('returns filters array via getFilters', function () {
 it('keeps query parameters already present on the request', function () {
     $request = $this->factory->createRequest('GET', 'https://api.example.com/users?expand=all');
 
-    $applied = FilterBuilder::for($request)
+    $applied = QueryBuilder::for($request)
         ->where('status', 'active')
         ->apply();
 
@@ -62,7 +62,7 @@ it('keeps query parameters already present on the request', function () {
 it('overrides a query parameter already present on the request', function () {
     $request = $this->factory->createRequest('GET', 'https://api.example.com/users?page=1');
 
-    $applied = FilterBuilder::for($request)
+    $applied = QueryBuilder::for($request)
         ->where('page', 7)
         ->apply();
 
@@ -72,7 +72,7 @@ it('overrides a query parameter already present on the request', function () {
 it('merges bracketed keys against existing bracketed parameters', function () {
     $request = $this->factory->createRequest('GET', 'https://api.example.com/users?filter%5Brole%5D=admin');
 
-    $applied = FilterBuilder::for($request)
+    $applied = QueryBuilder::for($request)
         ->where('filter[status]', 'active')
         ->apply();
 
@@ -84,7 +84,7 @@ it('merges bracketed keys against existing bracketed parameters', function () {
 });
 
 it('renders booleans as true and false', function () {
-    $builder = FilterBuilder::for($this->request)
+    $builder = QueryBuilder::for($this->request)
         ->where('archived', true)
         ->where('recurring', false);
 
@@ -92,7 +92,7 @@ it('renders booleans as true and false', function () {
 });
 
 it('omits null filters entirely', function () {
-    $builder = FilterBuilder::for($this->request)
+    $builder = QueryBuilder::for($this->request)
         ->where('status', 'active')
         ->where('role', null);
 
@@ -100,21 +100,21 @@ it('omits null filters entirely', function () {
 });
 
 it('renders backed enums as their value', function () {
-    $builder = FilterBuilder::for($this->request)
+    $builder = QueryBuilder::for($this->request)
         ->where('status', Status::Active);
 
     expect($builder->toQueryString())->toBe('status=active');
 });
 
 it('renders dates in ATOM format', function () {
-    $builder = FilterBuilder::for($this->request)
+    $builder = QueryBuilder::for($this->request)
         ->where('since', new DateTimeImmutable('2026-01-02 03:04:05', new DateTimeZone('UTC')));
 
     expect(urldecode($builder->toQueryString()))->toBe('since=2026-01-02T03:04:05+00:00');
 });
 
 it('renders array filters as repeated bracketed parameters', function () {
-    $builder = FilterBuilder::for($this->request)
+    $builder = QueryBuilder::for($this->request)
         ->where('tags', ['vip', 'new'])
         ->where('status', [Status::Active, Status::Archived]);
 
@@ -127,14 +127,14 @@ it('renders array filters as repeated bracketed parameters', function () {
 });
 
 it('encodes spaces per RFC 3986', function () {
-    $builder = FilterBuilder::for($this->request)
+    $builder = QueryBuilder::for($this->request)
         ->where('name', 'jane doe');
 
     expect($builder->toQueryString())->toBe('name=jane%20doe');
 });
 
 it('throws when a filter cannot be converted to a query parameter', function () {
-    FilterBuilder::for($this->request)
+    QueryBuilder::for($this->request)
         ->where('client', new stdClass())
         ->toQueryString();
 })->throws(InvalidArgumentException::class, 'Filter [client] cannot be converted');
