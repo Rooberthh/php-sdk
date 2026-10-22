@@ -6,19 +6,17 @@ namespace Rooberthh\Sdk;
 
 use Http\Client\Common\Plugin\AuthenticationPlugin;
 use Http\Client\Common\Plugin\HeaderDefaultsPlugin;
-use Http\Client\Common\Plugin\HistoryPlugin;
 use Psr\Http\Message\RequestInterface;
 use Rooberthh\Sdk\Contracts\AuthenticationContract;
 use Rooberthh\Sdk\Contracts\ClientContract;
 use Rooberthh\Sdk\Http\Builder;
-use Rooberthh\Sdk\Http\ResponseHistory;
 use Http\Client\Common\Plugin;
 
 abstract class Client implements ClientContract
 {
     private readonly Builder $builder;
 
-    private readonly ResponseHistory $history;
+    private ?Response $lastResponse = null;
 
     /**
      * Pass a builder to control the transport; omit it and one is assembled
@@ -31,9 +29,6 @@ abstract class Client implements ClientContract
         ?Builder $builder = null,
     ) {
         $this->builder = $builder ?? new Builder();
-        $this->history = new ResponseHistory();
-
-        $this->builder->addPlugin(new HistoryPlugin($this->history));
 
         if ($this->defaultHeaders() !== []) {
             $this->builder->addPlugin(new HeaderDefaultsPlugin($this->defaultHeaders()));
@@ -50,7 +45,11 @@ abstract class Client implements ClientContract
 
     public function send(RequestInterface $request): Response
     {
-        return new Response($this->builder->getHttpClient()->sendRequest($request));
+        // Cleared first so a failed send leaves no earlier response reported as
+        // though it were this one; the field is set again only on success.
+        $this->lastResponse = null;
+
+        return $this->lastResponse = new Response($this->builder->getHttpClient()->sendRequest($request));
     }
 
     /**
@@ -68,9 +67,7 @@ abstract class Client implements ClientContract
      */
     public function getLastResponse(): ?Response
     {
-        $response = $this->history->lastResponse();
-
-        return $response === null ? null : new Response($response);
+        return $this->lastResponse;
     }
 
     public function url(): string
