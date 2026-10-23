@@ -59,7 +59,7 @@ it('can return an array of data-objects with nested data-objects', function () {
 it('can post a payload', function () {
     $client = $this->createMockClient('list-store');
 
-    $response = $client->tests()->storeJson(['test' => 'payload']);
+    $response = $client->tests()->store(['test' => 'payload']);
 
     expect($response->status())->toBe(StatusCode::OK->value);
 });

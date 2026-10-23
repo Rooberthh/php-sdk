@@ -24,12 +24,13 @@
     "funding": [],
     "require": {
         "php": "^8.3",
-        "cuyz/valinor": "^2.6",
         "ext-fileinfo": "*",
         "ext-json": "*",
+        "cuyz/valinor": "^2.6",
         "nyholm/psr7": "^1.8.1",
         "php-http/client-common": "^2.7.1",
         "php-http/discovery": "^1.19.2",
+        "php-http/message": "^1.16",
         "psr/http-client": "^1.0.3",
         "psr/http-client-implementation": "*",
         "psr/http-factory-implementation": "*",
@@ -40,7 +41,6 @@
     "require-dev": {
         "laravel/pint": "^1.18",
         "pestphp/pest": "^3.5",
-        "php-http/mock-client": "^1.6",
         "phpstan/phpstan": "^2.0"
     },
     "provide": {

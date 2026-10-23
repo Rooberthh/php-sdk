@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Rooberthh\Sdk\Tests\Stubs;
 
 use Rooberthh\Sdk\Client;
-use Rooberthh\Sdk\Http\Builder;
 
 /**
  * Reads a property assigned after parent::__construct() from defaultHeaders().
@@ -16,9 +15,9 @@ class LateHeaderClient extends Client
 {
     private string $apiVersion;
 
-    public function __construct(string $url, string $apiVersion, ?Builder $builder = null)
+    public function __construct(string $url, string $apiVersion)
     {
-        parent::__construct($url, $builder);
+        parent::__construct($url);
 
         $this->apiVersion = $apiVersion;
     }

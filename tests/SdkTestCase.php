@@ -4,34 +4,34 @@ declare(strict_types=1);
 
 namespace Rooberthh\Sdk\Tests;
 
+use InvalidArgumentException;
+use JsonException;
 use PHPUnit\Framework\TestCase as BaseTestCase;
-use Rooberthh\Sdk\Client;
-use Rooberthh\Sdk\Contracts\ClientContract;
 use Rooberthh\Sdk\Testing\FakeTransport;
 use Rooberthh\Sdk\Tests\Stubs\MockClient;
 
 abstract class SdkTestCase extends BaseTestCase
 {
-    public function createClient(): Client
+    public function createClient(): MockClient
     {
-        return new MockClient(
-            url: 'https://api.mock.com',
-            builder: (new FakeTransport())->builder(),
-        );
+        return (new MockClient('https://api.mock.com'))->client(new FakeTransport());
     }
 
     /**
      * @param string $fixture
      * @throws JsonException
      */
-    protected function createMockClient(string $fixture): ClientContract
+    protected function createMockClient(string $fixture): MockClient
     {
-        return new MockClient(
-            url: 'https://api.mock.com',
-            builder: (new FakeTransport(['*' => $this->fixture($fixture)]))->builder(),
-        );
+        return (new MockClient('https://api.mock.com'))
+            ->client(new FakeTransport(['*' => $this->fixture($fixture)]));
     }
 
+    /**
+     * @param string $path
+     * @throws InvalidArgumentException|JsonException
+     * @return array<mixed, mixed>
+     */
     protected function fixture(string $path): array
     {
         $filename = __DIR__ . "/Fixtures/{$path}.json";

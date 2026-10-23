@@ -7,131 +7,145 @@ namespace Rooberthh\Sdk;
 use CuyZ\Valinor\Normalizer\Configurator\NormalizeKeysToSnakeCase;
 use CuyZ\Valinor\Normalizer\Format;
 use CuyZ\Valinor\NormalizerBuilder;
-use Http\Client\Common\Plugin\AuthenticationPlugin;
-use Http\Client\Common\Plugin\HeaderDefaultsPlugin;
-use Psr\Http\Message\RequestInterface;
-use Rooberthh\HttpTools\Enums\Method;
-use Rooberthh\Sdk\Contracts\AuthenticationContract;
-use Rooberthh\Sdk\Contracts\ClientContract;
-use Rooberthh\Sdk\Http\Builder;
 use Http\Client\Common\Plugin;
+use Http\Client\Common\Plugin\HeaderDefaultsPlugin;
+use Http\Client\Common\PluginClientFactory;
+use Http\Discovery\Psr17FactoryDiscovery;
+use Http\Discovery\Psr18ClientDiscovery;
+use Http\Message\Authentication;
+use Psr\Http\Client\ClientInterface;
+use Psr\Http\Message\RequestFactoryInterface;
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\StreamFactoryInterface;
+use Psr\Http\Message\StreamInterface;
+use Rooberthh\HttpTools\Enums\Method;
+use Rooberthh\Sdk\Contracts\ClientContract;
 
+/**
+ * The entry point of an SDK: it builds requests against the API's URL and
+ * sends them through the Transport.
+ *
+ * An SDK Author extends it and adds a method per Resource; the Consumer
+ * constructs it with the URL and the Authentication strategy they hold, and
+ * may add plugins ({@see self::setup()}) or swap the Transport
+ * ({@see self::client()}) — both fluent, both allowed at any time.
+ */
 abstract class Client implements ClientContract
 {
-    private readonly Builder $builder;
+    private ClientInterface $http;
 
-    private bool $pluginsAdded = false;
+    private readonly RequestFactoryInterface $requestFactory;
+
+    private readonly StreamFactoryInterface $streamFactory;
+
+    /** @var list<Plugin> */
+    private array $plugins = [];
+
+    private ?ClientInterface $transport = null;
 
     private ?Response $lastResponse = null;
 
     /**
-     * Pass a builder to control the transport; omit it and one is assembled
-     * from whatever PSR-18 client and PSR-17 factories are installed.
+     * The PSR-18 client and PSR-17 factories are discovered from whatever is
+     * installed, so nothing else needs wiring up.
      *
-     * The builder is copied, so the one passed in is never mutated and can be
-     * reused across several clients. The client's own default plugins are added
-     * to the copy on the first request, not here — so credentials and other
-     * properties this client reads may be assigned anywhere in the constructor.
-     *
-     * @param string $url
-     * @param ?Builder $builder
+     * @param string               $url
+     * @param null|Authentication  $auth applied to every request unless one overrides it ({@see self::send()})
      */
     public function __construct(
         protected readonly string $url,
-        ?Builder $builder = null,
+        private readonly ?Authentication $auth = null,
     ) {
-        $this->builder = clone ($builder ?? new Builder());
+        $this->http = Psr18ClientDiscovery::find();
+        $this->requestFactory = Psr17FactoryDiscovery::findRequestFactory();
+        $this->streamFactory = Psr17FactoryDiscovery::findStreamFactory();
     }
 
     /**
-     * Build a request to a path on this client's URL and send it.
+     * Add plugins to the end of the chain, after the client's own.
      *
-     * The body is encoded by type: an object is normalised to snake_case JSON
-     * with null properties dropped, an array is JSON-encoded as given, a string
-     * is sent raw, and null sends no body. Per-call headers override the
-     * defaults, so a raw body can set its own `Content-Type`.
-     *
-     * @param Method                                 $method
-     * @param string                                 $uri
-     * @param array<string, mixed>                   $query   applied with {@see QueryBuilder}; null values are dropped
-     * @param null|array<mixed, mixed>|object|string $body
-     * @param array<string, string>                  $headers set on the request; these win over the defaults
+     * @param array<int, Plugin> $plugins
      */
-    public function request(
-        Method $method,
-        string $uri,
-        array $query = [],
-        object|array|string|null $body = null,
-        array $headers = [],
-    ): Response {
-        $request = $this->builder()->getRequestFactory()->createRequest(
+    public function setup(array $plugins): static
+    {
+        array_push($this->plugins, ...array_values($plugins));
+        $this->transport = null;
+
+        return $this;
+    }
+
+    /**
+     * Send through a different PSR-18 client — your own, or a
+     * {@see Testing\FakeTransport} in tests. Plugins still apply.
+     * @param ClientInterface $http
+     */
+    public function client(ClientInterface $http): static
+    {
+        $this->http = $http;
+        $this->transport = null;
+
+        return $this;
+    }
+
+    /**
+     * A request to a path on this client's URL, ready to send.
+     *
+     * Null query values are dropped, so optional Filters can be passed straight
+     * through; see {@see QueryBuilder} for how the rest are written.
+     *
+     * @param Method               $method
+     * @param string               $uri
+     * @param array<string, mixed> $query
+     */
+    public function createRequest(Method $method, string $uri, array $query = []): RequestInterface
+    {
+        $request = $this->requestFactory->createRequest(
             $method->value,
             $this->url() . '/' . ltrim($uri, '/'),
         );
 
-        $request = QueryBuilder::for($request)->whereAll($query)->apply();
-
-        foreach ($headers as $name => $value) {
-            $request = $request->withHeader($name, $value);
-        }
-
-        if ($body !== null) {
-            $request = $request->withBody(
-                $this->builder()->getStreamFactory()->createStream($this->encodeBody($body)),
-            );
-        }
-
-        return $this->send($request);
+        return $query === [] ? $request : QueryBuilder::for($request)->whereAll($query)->apply();
     }
 
-    public function send(RequestInterface $request): Response
+    /**
+     * A request body, encoded by type: an object is normalised to snake_case
+     * JSON with null properties dropped, an array is JSON-encoded as given, and
+     * a string is sent raw.
+     *
+     * @param array<mixed, mixed>|object|string $body
+     */
+    public function createPayload(object|array|string $body): StreamInterface
+    {
+        return $this->streamFactory->createStream(match (true) {
+            is_string($body) => $body,
+            is_array($body)  => json_encode($body, JSON_THROW_ON_ERROR),
+            default          => json_encode($this->normalise($body), JSON_THROW_ON_ERROR),
+        });
+    }
+
+    /**
+     * Send a request through the Transport.
+     *
+     * Authentication is applied here, before the plugin chain, so every plugin
+     * and the Transport see the request as it goes over the wire. Pass `$auth`
+     * to use other credentials for this one request, or {@see Auth\NoAuth} to
+     * send it without any.
+     * @param RequestInterface $request
+     * @param ?Authentication $auth
+     */
+    public function send(RequestInterface $request, ?Authentication $auth = null): Response
     {
         // Cleared first so a failed send leaves no earlier response reported as
         // though it were this one; the field is set again only on success.
         $this->lastResponse = null;
 
-        return $this->lastResponse = new Response($this->builder()->getHttpClient()->sendRequest($request));
-    }
+        $auth ??= $this->auth;
 
-    /**
-     * The transport, for adding plugins after construction.
-     *
-     * The client's own default plugins (default headers, authentication and
-     * {@see defaultPlugins()}) are added the first time this is called, after
-     * any already on the injected builder. A consumer can still remove them
-     * afterwards, since removal also goes through the builder this returns.
-     */
-    public function builder(): Builder
-    {
-        $this->addDefaultPlugins();
-
-        return $this->builder;
-    }
-
-    /**
-     * Add this client's default plugins to the builder, once. Guarded so the
-     * first call installs them and later calls are a no-op, which keeps the
-     * installation lazy without re-adding plugins on every request.
-     */
-    private function addDefaultPlugins(): void
-    {
-        if ($this->pluginsAdded) {
-            return;
+        if ($auth !== null) {
+            $request = $auth->authenticate($request);
         }
 
-        $this->pluginsAdded = true;
-
-        if ($this->defaultHeaders() !== []) {
-            $this->builder->addPlugin(new HeaderDefaultsPlugin($this->defaultHeaders()));
-        }
-
-        if ($this instanceof AuthenticationContract) {
-            $this->builder->addPlugin(new AuthenticationPlugin($this->authentication()));
-        }
-
-        foreach ($this->defaultPlugins() as $plugin) {
-            $this->builder->addPlugin($plugin);
-        }
+        return $this->lastResponse = new Response($this->transport()->sendRequest($request));
     }
 
     /**
@@ -173,18 +187,25 @@ abstract class Client implements ClientContract
     }
 
     /**
-     * Encode a body for the wire, chosen by type: an object is normalised to
-     * JSON, an array is JSON-encoded as given, and a string is sent raw.
+     * The PSR-18 client with every plugin applied: default headers, then
+     * {@see self::defaultPlugins()}, then those added through {@see self::setup()}.
      *
-     * @param array<mixed, mixed>|object|string $body
+     * Composed on first use rather than in the constructor, so the defaults may
+     * read properties a subclass assigns after calling parent::__construct(),
+     * and composed again after the plugins or the client change.
      */
-    private function encodeBody(object|array|string $body): string
+    private function transport(): ClientInterface
     {
-        return match (true) {
-            is_string($body) => $body,
-            is_array($body)  => json_encode($body, JSON_THROW_ON_ERROR),
-            default          => json_encode($this->normalise($body), JSON_THROW_ON_ERROR),
-        };
+        if ($this->transport !== null) {
+            return $this->transport;
+        }
+
+        $plugins = $this->defaultHeaders() === [] ? [] : [new HeaderDefaultsPlugin($this->defaultHeaders())];
+
+        return $this->transport = (new PluginClientFactory())->createClient(
+            $this->http,
+            [...$plugins, ...array_values($this->defaultPlugins()), ...$this->plugins],
+        );
     }
 
     /**

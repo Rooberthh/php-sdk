@@ -9,7 +9,6 @@ use PHPUnit\Framework\Assert;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
-use Rooberthh\Sdk\Http\Builder;
 
 /**
  * A Transport that answers from a table of canned responses instead of the
@@ -29,10 +28,10 @@ use Rooberthh\Sdk\Http\Builder;
  * {@see UnexpectedRequest} rather than falling back to a default — a missing
  * fake is a bug in the test.
  *
- * It implements the PSR-18 client interface so it drops straight into a
- * {@see Builder}, which means it sits at the far end of the plugin chain:
- * recorded requests are exactly what would have gone over the wire, auth and
- * default headers included.
+ * It implements the PSR-18 client interface, so it is handed to a Client with
+ * `->client($fake)` and sits at the far end of the plugin chain: recorded
+ * requests are exactly what would have gone over the wire, auth and default
+ * headers included.
  */
 final class FakeTransport implements ClientInterface
 {
@@ -61,14 +60,6 @@ final class FakeTransport implements ClientInterface
         }
 
         throw UnexpectedRequest::for($request, array_map(strval(...), array_keys($this->fakes)));
-    }
-
-    /**
-     * A Builder wrapping this transport, ready to hand to a Client.
-     */
-    public function builder(): Builder
-    {
-        return new Builder($this);
     }
 
     /**

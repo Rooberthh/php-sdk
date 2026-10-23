@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Rooberthh\Sdk\Tests\Stubs\Resources;
 
+use Http\Message\Authentication;
 use Rooberthh\HttpTools\Enums\Method;
 use Rooberthh\Sdk\Concerns\Resources\CanAccessClient;
+use Rooberthh\Sdk\Concerns\Resources\CanCreateRequests;
 use Rooberthh\Sdk\Response;
 use Rooberthh\Sdk\Tests\Stubs\DataObjects\NestedDataObject;
 use Rooberthh\Sdk\Tests\Stubs\DataObjects\TestDataObject;
@@ -13,15 +15,16 @@ use Rooberthh\Sdk\Tests\Stubs\DataObjects\TestDataObject;
 class TestResource
 {
     use CanAccessClient;
+    use CanCreateRequests;
 
     /**
      * @return list<TestDataObject>
      */
     public function list(): array
     {
-        return $this->client
-            ->request(Method::GET, '/test', query: ['name' => 'asc'])
-            ->dataObjects(TestDataObject::class);
+        $request = $this->request(Method::GET, '/test', query: ['name' => 'asc']);
+
+        return $this->client->send($request)->dataObjects(TestDataObject::class);
     }
 
     /**
@@ -30,25 +33,23 @@ class TestResource
     public function listNested(): array
     {
         return $this->client
-            ->request(Method::GET, '/test')
+            ->send($this->request(Method::GET, '/test'))
             ->dataObjects(NestedDataObject::class);
     }
 
-    public function store(object $payload): Response
-    {
-        return $this->client->request(Method::POST, '/test', body: $payload);
-    }
-
     /**
-     * @param array<mixed, mixed> $data
+     * @param array<mixed, mixed>|object|string $body
      */
-    public function storeJson(array $data): Response
+    public function store(object|array|string $body): Response
     {
-        return $this->client->request(Method::POST, '/test', body: $data);
+        $request = $this->request(Method::POST, '/test')
+            ->withBody($this->payload($body));
+
+        return $this->client->send($request);
     }
 
-    public function storeRaw(string $body): Response
+    public function status(?Authentication $auth = null): Response
     {
-        return $this->client->request(Method::POST, '/test', body: $body);
+        return $this->client->send($this->request(Method::GET, '/status'), auth: $auth);
     }
 }
