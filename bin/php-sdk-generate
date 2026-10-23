@@ -4,7 +4,8 @@
 /**
  * SDK Generator Script
  *
- * Generates a new SDK with authentication support and sample User resource.
+ * Generates a new SDK with a sample User resource. Authentication is the
+ * Consumer's choice, passed to the client's constructor.
  * Run with: composer generate-sdk
  * @param string $question
  * @param string $default
@@ -74,50 +75,8 @@ function writeFile(string $path, string $content): void
     echo "Generated: $path\n";
 }
 
-function generateClientClass(string $namespace, string $className, ?string $authType): string
+function generateClientClass(string $namespace, string $className): string
 {
-    $implements = $authType ? ' implements AuthenticationContract' : '';
-    $imports = '';
-    $constructorArgs = '';
-    $authMethod = '';
-
-    if ($authType !== null) {
-        $imports = "use Http\\Message\\Authentication;\n";
-    }
-
-    if ($authType === 'bearer') {
-        $imports .= "use Http\\Message\\Authentication\\Bearer;\n";
-        $constructorArgs = "\n        private readonly string \$token,";
-        $authMethod = "
-    public function authentication(): Authentication
-    {
-        return new Bearer(\$this->token);
-    }
-";
-    } elseif ($authType === 'basic') {
-        $imports .= "use Http\\Message\\Authentication\\BasicAuth;\n";
-        $constructorArgs = "\n        private readonly string \$username,\n        private readonly string \$password,";
-        $authMethod = "
-    public function authentication(): Authentication
-    {
-        return new BasicAuth(\$this->username, \$this->password);
-    }
-";
-    }
-
-    $constructor = <<<CTOR
-
-    public function __construct(
-        string \$url,{$constructorArgs}
-        ?Builder \$builder = null,
-    ) {
-        parent::__construct(\$url, \$builder);
-    }
-
-CTOR;
-
-    $authUse = $authType ? "use Rooberthh\\Sdk\\Contracts\\AuthenticationContract;\n" : '';
-
     return <<<PHP
 <?php
 
@@ -125,17 +84,16 @@ declare(strict_types=1);
 
 namespace {$namespace};
 
-{$imports}use Rooberthh\Sdk\Client;
-{$authUse}use Rooberthh\Sdk\Http\Builder;
+use Rooberthh\Sdk\Client;
 use {$namespace}\Resources\UserResource;
 
-class {$className} extends Client{$implements}
-{{$constructor}
+class {$className} extends Client
+{
     public function users(): UserResource
     {
         return new UserResource(\$this);
     }
-{$authMethod}}
+}
 
 PHP;
 }
@@ -149,13 +107,15 @@ declare(strict_types=1);
 
 namespace {$namespace}\Resources;
 
-use Rooberthh\Sdk\Concerns\Resources\CanAccessClient;
 use Rooberthh\HttpTools\Enums\Method;
+use Rooberthh\Sdk\Concerns\Resources\CanAccessClient;
+use Rooberthh\Sdk\Concerns\Resources\CanCreateRequests;
 use {$namespace}\DataObjects\\{$dataObjectName};
 
 class {$resourceName}
 {
     use CanAccessClient;
+    use CanCreateRequests;
 
     /**
      * Fetch a single user by ID.
@@ -165,9 +125,9 @@ class {$resourceName}
      */
     public function show(int \$id): {$dataObjectName}
     {
-        return \$this->client
-            ->request(Method::GET, "/users/{\$id}")
-            ->dataObject({$dataObjectName}::class);
+        \$request = \$this->request(Method::GET, "/users/{\$id}");
+
+        return \$this->client->send(\$request)->dataObject({$dataObjectName}::class);
     }
 }
 
@@ -242,35 +202,15 @@ do {
     break;
 } while (true);
 
-// Step 3: Ask about authentication
-$useAuth = confirm('Do you want to use authentication?');
-
-$authType = null;
-if ($useAuth) {
-    echo "\n";
-    $authType = selectOption('Which authentication type would you like to use?', [
-        'bearer' => 'Bearer Token',
-        'basic' => 'Basic Authentication',
-    ]);
-}
-
 // Generate namespace and class names
 $namespace = generateNamespace($sdkName);
 $clientClassName = "{$sdkName}Client";
-
-$authLabel = 'None';
-if ($authType === 'bearer') {
-    $authLabel = 'Bearer Token';
-} elseif ($authType === 'basic') {
-    $authLabel = 'Basic Authentication';
-}
 
 echo "\n";
 echo "Configuration:\n";
 echo "  SDK Name: $sdkName\n";
 echo "  Namespace: $namespace\n";
 echo "  Path: $installPath\n";
-echo "  Authentication: $authLabel\n";
 echo "\n";
 
 $proceed = confirm('Proceed with generation?');
@@ -291,7 +231,7 @@ ensureDirectory($basePath . '/Resources');
 ensureDirectory($basePath . '/DataObjects');
 
 // Generate Client class
-$clientContent = generateClientClass($namespace, $clientClassName, $authType);
+$clientContent = generateClientClass($namespace, $clientClassName);
 writeFile($basePath . '/' . $clientClassName . '.php', $clientContent);
 
 // Generate UserResource class
@@ -313,13 +253,10 @@ echo "  - {$installPath}/Resources/UserResource.php\n";
 echo "  - {$installPath}/DataObjects/UserDataObject.php\n";
 echo "\n";
 echo "Usage example:\n";
-$credentialArgs = match ($authType) {
-    'bearer' => ", 'your-api-token'",
-    'basic'  => ", 'username', 'password'",
-    default  => '',
-};
-
-echo "  \$client = new {$namespace}\\{$clientClassName}('https://api.example.com'{$credentialArgs});\n";
+echo "  \$client = new {$namespace}\\{$clientClassName}(\n";
+echo "      url: 'https://api.example.com',\n";
+echo "      auth: new Rooberthh\\Sdk\\Auth\\BearerToken('your-api-token'),\n";
+echo "  );\n";
 echo "  \$user = \$client->users()->show(1);\n";
 echo "  echo \$user->name;\n";
 echo "\n";

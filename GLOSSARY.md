@@ -32,6 +32,10 @@ _Avoid_: Endpoint, service, repository
 The component that actually sends HTTP requests on the Client's behalf.
 _Avoid_: HTTP client, adapter
 
+**Authentication strategy**:
+How a Client proves to the API who the Consumer is. The Consumer chooses it when creating the Client, and a single request may use a different one or none.
+_Avoid_: Auth, credentials (for the strategy itself), auth type
+
 ### Data
 
 **Payload**:

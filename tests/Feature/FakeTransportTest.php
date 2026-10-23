@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace Rooberthh\Sdk\Tests\Feature;
 
 use Psr\Http\Message\RequestInterface;
+use Rooberthh\Sdk\Auth\BearerToken;
 use Rooberthh\Sdk\Testing\FakeResponse;
 use Rooberthh\Sdk\Testing\FakeTransport;
-use Rooberthh\Sdk\Tests\Stubs\AuthenticatedClient;
 use Rooberthh\Sdk\Tests\Stubs\DataObjects\TestDataObject;
+use Rooberthh\Sdk\Tests\Stubs\MockClient;
 
 it('serves data objects to a resource and records the authenticated request', function () {
     $fake = new FakeTransport([
@@ -18,7 +19,7 @@ it('serves data objects to a resource and records the authenticated request', fu
         ]),
     ]);
 
-    $client = new AuthenticatedClient(url: 'https://api.example.com', builder: $fake->builder());
+    $client = (new MockClient('https://api.example.com', new BearerToken('secret-token')))->client($fake);
 
     $objects = $client->tests()->list();
 
@@ -27,7 +28,7 @@ it('serves data objects to a resource and records the authenticated request', fu
         ->and($objects[0]->name)->toBe('Ada');
 
     // The fake sits at the end of the plugin chain, so the recorded request
-    // carries the Authorization header the AuthenticationPlugin added.
+    // carries the credentials exactly as they went over the wire.
     $fake->assertSent(
         fn(RequestInterface $request): bool => $request->getHeaderLine('Authorization') === 'Bearer secret-token',
     );

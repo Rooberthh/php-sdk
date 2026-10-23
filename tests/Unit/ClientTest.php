@@ -2,123 +2,98 @@
 
 declare(strict_types=1);
 
-use Http\Client\Common\Plugin\AuthenticationPlugin;
+use Http\Client\Common\Plugin\HeaderAppendPlugin;
 use Http\Client\Common\Plugin\HeaderSetPlugin;
-use Http\Client\Common\Plugin\RedirectPlugin;
 use Http\Client\Exception\NetworkException;
-use Http\Mock\Client as MockTransport;
-use Nyholm\Psr7\Request;
-use Nyholm\Psr7\Response as Psr7Response;
+use Psr\Http\Message\RequestInterface;
+use Rooberthh\HttpTools\Enums\Method;
 use Rooberthh\Sdk\Contracts\ClientContract;
-use Rooberthh\Sdk\Http\Builder;
 use Rooberthh\Sdk\Response;
+use Rooberthh\Sdk\Testing\FakeResponse;
+use Rooberthh\Sdk\Testing\FakeTransport;
 use Rooberthh\Sdk\Tests\SdkTestCase;
-use Rooberthh\Sdk\Tests\Stubs\AuthenticatedClient;
-use Rooberthh\Sdk\Tests\Stubs\LateAuthenticatedClient;
 use Rooberthh\Sdk\Tests\Stubs\LateHeaderClient;
 use Rooberthh\Sdk\Tests\Stubs\MockClient;
 use Rooberthh\Sdk\Tests\Stubs\NonSeekableStream;
+use Rooberthh\Sdk\Tests\Stubs\PluginClient;
 
 uses(SdkTestCase::class);
-
-/**
- * A client over a mock transport. The mock sits *inside* the plugin chain, so
- * whatever it records is the request as it would go over the wire.
- *
- * @param string $class
- * @param int $responses
- * @return array{0: AuthenticatedClient|MockClient, 1: MockTransport}
- */
-function wired(string $class = MockClient::class, int $responses = 1): array
-{
-    $mock = new MockTransport();
-
-    for ($i = 0; $i < $responses; $i++) {
-        $mock->addResponse(new Psr7Response(200, [], '{}'));
-    }
-
-    return [new $class(url: 'https://api.mock.com', builder: new Builder($mock)), $mock];
-}
-
-function get(string $path = '/test'): Request
-{
-    return new Request('GET', "https://api.mock.com{$path}");
-}
 
 it('can create a client', function () {
     expect($this->createClient())->toBeInstanceOf(ClientContract::class);
 });
 
-it('exposes its builder', function () {
-    expect($this->createClient()->builder())->toBeInstanceOf(Builder::class);
-});
-
 it('sends the default headers', function () {
-    [$client, $mock] = wired();
+    [$client, $fake] = fakeClient();
 
-    $client->send(get());
+    $client->send($client->createRequest(Method::GET, '/test'));
 
-    expect($mock->getRequests()[0]->getHeaderLine('Accept'))->toBe('application/json')
-        ->and($mock->getRequests()[0]->getHeaderLine('Content-Type'))->toBe('application/json');
+    expect(sent($fake)->getHeaderLine('Accept'))->toBe('application/json')
+        ->and(sent($fake)->getHeaderLine('Content-Type'))->toBe('application/json');
 });
 
-it('sends the authentication the client declares', function () {
-    [$client, $mock] = wired(AuthenticatedClient::class);
+it('applies plugins added with setup() after a first request', function () {
+    [$client, $fake] = fakeClient();
 
-    $client->send(get());
+    $client->send($client->createRequest(Method::GET, '/test'));
+    $client->setup([new HeaderSetPlugin(['X-Trace' => 'abc'])]);
+    $client->send($client->createRequest(Method::GET, '/test'));
 
-    expect($mock->getRequests()[0]->getHeaderLine('Authorization'))->toBe('Bearer secret-token');
+    expect(sent($fake, 0)->hasHeader('X-Trace'))->toBeFalse()
+        ->and(sent($fake, 1)->getHeaderLine('X-Trace'))->toBe('abc');
 });
 
-it('applies plugins added after construction', function () {
-    [$client, $mock] = wired(responses: 2);
+it('runs the sdk author plugins before the consumer plugins', function () {
+    [$client, $fake] = fakeClient(PluginClient::class);
 
-    $client->send(get());
-    expect($mock->getRequests()[0]->hasHeader('X-Trace'))->toBeFalse();
+    $client->setup([new HeaderAppendPlugin(['X-Order' => 'consumer'])]);
+    $client->send($client->createRequest(Method::GET, '/test'));
 
-    $client->builder()->addPlugin(new HeaderSetPlugin(['X-Trace' => 'abc']));
-    $client->send(get());
-
-    expect($mock->getRequests()[1]->getHeaderLine('X-Trace'))->toBe('abc');
+    expect(sent($fake)->getHeader('X-Order'))->toBe(['author', 'consumer']);
 });
 
-it('stops applying a plugin once it is removed', function () {
-    [$client, $mock] = wired(responses: 2);
+it('keeps its plugins when the transport is swapped', function () {
+    [$client] = fakeClient();
+    $client->setup([new HeaderSetPlugin(['X-Trace' => 'abc'])]);
+    $client->send($client->createRequest(Method::GET, '/test'));
 
-    $client->builder()->addPlugin(new HeaderSetPlugin(['X-Trace' => 'abc']));
-    $client->send(get());
-    expect($mock->getRequests()[0]->getHeaderLine('X-Trace'))->toBe('abc');
+    $other = new FakeTransport(['*' => []]);
+    $client->client($other)->send($client->createRequest(Method::GET, '/test'));
 
-    $client->builder()->removePlugin(HeaderSetPlugin::class);
-    $client->send(get());
-
-    expect($mock->getRequests()[1]->hasHeader('X-Trace'))->toBeFalse();
+    expect(sent($other)->getHeaderLine('X-Trace'))->toBe('abc')
+        ->and(sent($other)->getHeaderLine('Accept'))->toBe('application/json');
 });
 
-it('leaves other plugins in place when one is removed', function () {
-    [$client, $mock] = wired();
+it('reads default headers from a property assigned after parent::__construct()', function () {
+    $fake = new FakeTransport(['*' => []]);
+    $client = (new LateHeaderClient('https://api.mock.com', apiVersion: '2024-01'))->client($fake);
 
-    $client->builder()->removePlugin(RedirectPlugin::class);
-    $client->send(get());
+    $client->send($client->createRequest(Method::GET, '/test'));
 
-    expect($mock->getRequests()[0]->getHeaderLine('Accept'))->toBe('application/json');
+    expect(sent($fake)->getHeaderLine('X-Api-Version'))->toBe('2024-01');
 });
 
 it('has no last response before anything is sent', function () {
-    [$client] = wired();
+    [$client] = fakeClient();
 
     expect($client->getLastResponse())->toBeNull();
 });
 
-it('remembers the last response after a call that returned data objects', function () {
-    $mock = new MockTransport();
-    $mock->addResponse(new Psr7Response(
-        200,
-        ['Link' => '<https://api.mock.com/test?page=2>; rel="next"'],
-        '[{"id":1,"name":"A","desc":"x"}]',
-    ));
+it('returns the same response instance that send() returned', function () {
+    [$client] = fakeClient();
 
-    $client = new MockClient(url: 'https://api.mock.com', builder: new Builder($mock));
+    $sent = $client->send($client->createRequest(Method::GET, '/test'));
+
+    expect($client->getLastResponse())->toBe($sent);
+});
+
+it('remembers the last response after a call that returned data objects', function () {
+    $client = (new MockClient('https://api.mock.com'))->client(new FakeTransport([
+        'GET test' => FakeResponse::json(
+            [['id' => 1, 'name' => 'A', 'desc' => 'x']],
+            headers: ['Link' => '<https://api.mock.com/test?page=2>; rel="next"'],
+        ),
+    ]));
 
     $objects = $client->tests()->list();
 
@@ -130,96 +105,33 @@ it('remembers the last response after a call that returned data objects', functi
 });
 
 it('keeps the last response readable after a read-once body was consumed', function () {
-    $mock = new MockTransport();
-    $mock->addResponse(new Psr7Response(200, [], new NonSeekableStream('[{"id":1,"name":"a","desc":"b"}]')));
-
-    $client = new MockClient(url: 'https://api.mock.com', builder: new Builder($mock));
+    $client = (new MockClient('https://api.mock.com'))->client(new FakeTransport([
+        '*' => FakeResponse::status(200)->withBody(new NonSeekableStream('[{"id":1,"name":"a","desc":"b"}]')),
+    ]));
 
     $client->tests()->list();
 
     expect($client->getLastResponse()?->json())->toBe([['id' => 1, 'name' => 'a', 'desc' => 'b']]);
 });
 
-it('returns the same response instance that send() returned', function () {
-    [$client] = wired();
-
-    $sent = $client->send(get());
-
-    expect($client->getLastResponse())->toBe($sent);
-});
-
-it('does not leak credentials between clients sharing a builder', function () {
-    $mock = new MockTransport();
-    $mock->addResponse(new Psr7Response(200, [], '{}'));
-    $mock->addResponse(new Psr7Response(200, [], '{}'));
-
-    $builder = new Builder($mock);
-
-    $a = new LateAuthenticatedClient(url: 'https://api.mock.com', token: 'token-a', builder: $builder);
-    $b = new LateAuthenticatedClient(url: 'https://api.mock.com', token: 'token-b', builder: $builder);
-
-    $a->send(get());
-    $b->send(get());
-
-    expect($mock->getRequests()[0]->getHeaderLine('Authorization'))->toBe('Bearer token-a')
-        ->and($mock->getRequests()[1]->getHeaderLine('Authorization'))->toBe('Bearer token-b');
-});
-
-it('is unaffected by plugins added to the original builder after construction', function () {
-    $mock = new MockTransport();
-    $mock->addResponse(new Psr7Response(200, [], '{}'));
-
-    $builder = new Builder($mock);
-    $client = new MockClient(url: 'https://api.mock.com', builder: $builder);
-
-    $builder->addPlugin(new HeaderSetPlugin(['X-Trace' => 'abc']));
-
-    $client->send(get());
-
-    expect($mock->getRequests()[0]->hasHeader('X-Trace'))->toBeFalse();
-});
-
-it('sends authentication assigned after parent::__construct()', function () {
-    $mock = new MockTransport();
-    $mock->addResponse(new Psr7Response(200, [], '{}'));
-
-    $client = new LateAuthenticatedClient(url: 'https://api.mock.com', token: 'late-token', builder: new Builder($mock));
-
-    $client->send(get());
-
-    expect($mock->getRequests()[0]->getHeaderLine('Authorization'))->toBe('Bearer late-token');
-});
-
-it('reads default headers from a property assigned after parent::__construct()', function () {
-    $mock = new MockTransport();
-    $mock->addResponse(new Psr7Response(200, [], '{}'));
-
-    $client = new LateHeaderClient(url: 'https://api.mock.com', apiVersion: '2024-01', builder: new Builder($mock));
-
-    $client->send(get());
-
-    expect($mock->getRequests()[0]->getHeaderLine('X-Api-Version'))->toBe('2024-01');
-});
-
-it('leaves out authentication when its plugin is removed before the first request', function () {
-    [$client, $mock] = wired(AuthenticatedClient::class);
-
-    $client->builder()->removePlugin(AuthenticationPlugin::class);
-    $client->send(get());
-
-    expect($mock->getRequests()[0]->hasHeader('Authorization'))->toBeFalse();
-});
-
 it('reports no last response when the request failed', function () {
-    $mock = new MockTransport();
-    $mock->addResponse(new Psr7Response(200, [], '{}'));
+    $offline = false;
 
-    $client = new MockClient(url: 'https://api.mock.com', builder: new Builder($mock));
-    $client->send(get());
+    $client = (new MockClient('https://api.mock.com'))->client(new FakeTransport([
+        '*' => function (RequestInterface $request) use (&$offline) {
+            if ($offline) {
+                throw new NetworkException('offline', $request);
+            }
+
+            return FakeResponse::json([]);
+        },
+    ]));
+
+    $client->send($client->createRequest(Method::GET, '/test'));
     expect($client->getLastResponse())->not->toBeNull();
 
-    $mock->addException(new NetworkException('offline', get()));
+    $offline = true;
 
-    expect(fn() => $client->send(get()))->toThrow(NetworkException::class)
+    expect(fn() => $client->send($client->createRequest(Method::GET, '/test')))->toThrow(NetworkException::class)
         ->and($client->getLastResponse())->toBeNull();
 });

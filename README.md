@@ -1,6 +1,8 @@
-# PHP SDK Generator
+# PHP SDK
 
-A flexible PHP SDK framework that helps you quickly build API client libraries with built-in authentication, resource management, and automatic data object mapping.
+A framework for building PHP SDKs for third-party APIs: a Client to extend,
+Resources that build plain PSR-7 requests, typed Data Objects mapped from the
+responses, and authentication the Consumer chooses.
 
 ## Requirements
 
@@ -11,129 +13,176 @@ A flexible PHP SDK framework that helps you quickly build API client libraries w
 ## Dependencies
 
 - `php-http/client-common` - the plugin chain requests pass through
+- `php-http/message` - the `Authentication` interface every auth strategy implements
 - `php-http/discovery` - finds your installed PSR-18 client and PSR-17 factories
 - `cuyz/valinor` - maps API responses onto data objects
 - `rooberthh/http-tools` - HTTP utilities
 
-## Quick Start
-
-### Installation
+## Installation
 
 ```bash
 composer require rooberthh/php-sdk
 ```
 
-## Generating Your SDK
+## Building an SDK
 
-### Using the CLI Generator
+### The Client
 
-The fastest way to create your SDK is using the included CLI generator that you can run from your project root.
+Extend `Client` and add a method per Resource. Nothing else is required — no
+constructor, no transport wiring, no authentication code:
+
+```php
+use Rooberthh\Sdk\Client;
+
+final class Acme extends Client
+{
+    public function users(): UserResource
+    {
+        return new UserResource($this);
+    }
+}
+```
+
+### Resources
+
+A Resource is a plain class composed from two traits:
+
+- `CanAccessClient` — the constructor that receives the Client.
+- `CanCreateRequests` — `request()` builds a PSR-7 request against the Client's
+  URL, and `payload()` encodes a request body.
+
+```php
+use Rooberthh\HttpTools\Enums\Method;
+use Rooberthh\Sdk\Concerns\Resources\CanAccessClient;
+use Rooberthh\Sdk\Concerns\Resources\CanCreateRequests;
+
+final class UserResource
+{
+    use CanAccessClient;
+    use CanCreateRequests;
+
+    /**
+     * @return list<User>
+     */
+    public function list(?string $status = null): array
+    {
+        $request = $this->request(Method::GET, '/users', query: ['status' => $status]);
+
+        return $this->client->send($request)->dataObjects(User::class, 'data');
+    }
+
+    public function show(int $id): User
+    {
+        $request = $this->request(Method::GET, "/users/{$id}");
+
+        return $this->client->send($request)->dataObject(User::class);
+    }
+
+    public function create(CreateUser $user): User
+    {
+        $request = $this->request(Method::POST, '/users')
+            ->withBody($this->payload($user));
+
+        return $this->client->send($request)->dataObject(User::class);
+    }
+
+    public function delete(int $id): void
+    {
+        $this->client->send($this->request(Method::DELETE, "/users/{$id}"))->throw();
+    }
+}
+```
+
+`request()` returns a plain PSR-7 request, so anything else goes on with the
+usual `with…()` methods — a header, a different body:
+
+```php
+$request = $this->request(Method::POST, '/orders')
+    ->withHeader('Content-Type', 'application/xml')
+    ->withBody($this->payload('<order><id>1</id></order>'));
+```
+
+The Client has the same two methods as `createRequest()` and `createPayload()`,
+for operations that don't belong to a Resource:
+
+```php
+final class Acme extends Client
+{
+    public function ping(): bool
+    {
+        return $this->send($this->createRequest(Method::GET, '/ping'))->successful();
+    }
+}
+```
+
+### Data Objects
+
+A Data Object is a `readonly` class built from the response by
+`dataObject()` / `dataObjects()`. snake_case response keys map to camelCase
+properties, and keys the object doesn't declare are ignored, so an API adding a
+field is never a breaking change:
+
+```php
+use Rooberthh\Sdk\Concerns\DataObjects\CanCreateInstances;
+use Rooberthh\Sdk\Contracts\DataObjectContract;
+
+final readonly class User implements DataObjectContract
+{
+    use CanCreateInstances;
+
+    public function __construct(
+        public int $id,
+        public string $name,
+        public ?string $avatarUrl,
+    ) {}
+}
+```
+
+Pass a key to read inside an envelope — `dataObjects(User::class, 'data')` reads
+the rows out of `{"data": [...], "meta": {...}}`.
+
+### Generating the skeleton
+
+The included generator writes a Client, a Resource and a Data Object to start
+from:
 
 ```bash
 ./vendor/bin/php-sdk-generate
 ```
 
-### Example Generated Client
+## Using an SDK
+
+The Consumer constructs the Client with the API's URL and the credentials they
+hold:
 
 ```php
-<?php
+use Rooberthh\Sdk\Auth\BearerToken;
 
-namespace MyApi;
-
-use Http\Message\Authentication;
-use Http\Message\Authentication\Bearer;
-use Rooberthh\Sdk\Client;
-use Rooberthh\Sdk\Contracts\AuthenticationContract;
-use Rooberthh\Sdk\Http\Builder;
-use MyApi\Resources\UserResource;
-
-class MyApiClient extends Client implements AuthenticationContract
-{
-    public function __construct(
-        string $url,
-        private readonly string $token,
-        ?Builder $builder = null,
-    ) {
-        parent::__construct($url, $builder);
-    }
-
-    public function users(): UserResource
-    {
-        return new UserResource($this);
-    }
-
-    public function authentication(): Authentication
-    {
-        return new Bearer($this->token);
-    }
-}
-```
-
-### Using Your Generated SDK
-
-```php
-$client = new MyApi\MyApiClient('https://api.example.com');
-
-// Use the resource methods
-$user = $client->users()->show(1);
-echo $user->name;
-```
-
-The client assembles its own transport from whatever PSR-18 client and PSR-17
-factories you have installed, so nothing else needs wiring up. To supply your
-own, pass a `Builder`:
-
-```php
-use Rooberthh\Sdk\Http\Builder;
-
-$client = new MyApi\MyApiClient(
-    url: 'https://api.example.com',
-    builder: new Builder($myPsr18Client),
+$acme = new Acme(
+    url: 'https://api.acme.test',
+    auth: new BearerToken($token),
 );
+
+$user = $acme->users()->show(1);
+echo $user->name;
 ```
 
 ## Authentication
 
-### How Authentication Works
+Authentication is the Consumer's choice: whatever strategy is passed to the
+constructor is applied to every request. These ship ready-made:
 
-Implement `AuthenticationContract` and the credentials it returns are applied to
-every request — the client wires it up in its constructor, so there is no
-separate setup step. `authentication()` is called on the first request, so
-credentials can be assigned anywhere in the constructor.
-
-#### Bearer Token
-
-```php
-use Http\Message\Authentication;
-use Http\Message\Authentication\Bearer;
-
-class MyApiClient extends Client implements AuthenticationContract
-{
-    public function authentication(): Authentication
-    {
-        return new Bearer($this->token);
-    }
-}
-```
-
-#### Other forms
-
-`php-http/message` ships the common ones — swap `Bearer` for any of these:
-
-| Class | Sends |
+| Strategy | Sends |
 | --- | --- |
-| `Bearer` | `Authorization: Bearer <token>` |
-| `BasicAuth` | `Authorization: Basic <base64>` |
-| `Header` | any header you name |
-| `QueryParam` | credentials as query parameters |
-| `Wsse` | a WSSE token |
-| `Chain` | several of the above, in order |
+| `new BearerToken($token)` | `Authorization: Bearer <token>` |
+| `new BasicAuth($username, $password)` | `Authorization: Basic <base64>` |
+| `ApiKey::header('X-Api-Key', $key)` | the key in the header you name |
+| `ApiKey::query('api_key', $key)` | the key as a query parameter, after the query already there |
+| `new NoAuth()` | nothing — the request as it is |
 
-#### Signing requests, and refreshing tokens
-
-Anything else is your own `Authentication`. It is handed the request and
-returns it authenticated, so HMAC signing and fetching a fresh token both
-belong here:
+All of them live in `Rooberthh\Sdk\Auth` and implement
+`Http\Message\Authentication`, so anything else that does fits too —
+`php-http/message`'s `Wsse` and `Chain`, or your own:
 
 ```php
 use Http\Message\Authentication;
@@ -152,105 +201,47 @@ final class HmacSignature implements Authentication
 }
 ```
 
-## Resource Classes
+### Per-request authentication
 
-Resources represent API endpoints and handle HTTP requests. Each resource typically manages one API resource type (users, products, orders, etc.).
+A Resource can send one request with other credentials, or with none, by
+passing them to `send()`:
 
 ```php
-<?php
+use Rooberthh\Sdk\Auth\NoAuth;
 
-namespace MyApi\Resources;
-
-use Rooberthh\Sdk\Concerns\Resources\CanAccessClient;
-use Rooberthh\HttpTools\Enums\Method;
-use MyApi\DataObjects\UserDataObject;
-
-class UserResource
+public function status(): Response
 {
-    use CanAccessClient;
+    return $this->client->send($this->request(Method::GET, '/status'), auth: new NoAuth());
+}
 
-    public function list(): array
-    {
-        return $this->client
-            ->request(Method::GET, '/users', query: [
-                'sort'  => 'name',
-                'order' => 'asc',
-                'limit' => 10,
-            ])
-            // Results in: /users?sort=name&order=asc&limit=10
-            ->dataObjects(UserDataObject::class);
-    }
+public function login(string $username, string $password): Session
+{
+    $request = $this->request(Method::POST, '/sessions');
 
-    public function show(int $id): UserDataObject
-    {
-        return $this->client
-            ->request(Method::GET, "/users/{$id}")
-            ->dataObject(UserDataObject::class);
-    }
+    return $this->client
+        ->send($request, auth: new BasicAuth($username, $password))
+        ->dataObject(Session::class);
+}
+```
 
-    public function create(array $userData): UserDataObject
-    {
-        return $this->client
-            ->request(Method::POST, '/users', body: $userData)
-            ->dataObject(UserDataObject::class);
-    }
+Credentials are applied before the plugin chain, so every plugin — and the
+fake transport in tests — sees the request exactly as it goes over the wire.
 
-    public function update(int $id, array $userData): UserDataObject
-    {
-        return $this->client
-            ->request(Method::PUT, "/users/{$id}", body: $userData)
-            ->dataObject(UserDataObject::class);
-    }
+### Requiring a particular strategy
 
-    public function delete(int $id): void
+An SDK whose API only accepts one form can say so in its own constructor:
+
+```php
+final class Acme extends Client
+{
+    public function __construct(string $token, string $url = 'https://api.acme.test')
     {
-        $this->client->request(Method::DELETE, "/users/{$id}");
+        parent::__construct($url, new BearerToken($token));
     }
 }
 ```
 
-`request()` builds the request and sends it, returning a `Response`. The `$uri`
-is joined onto the client's base URL, the `query` array is applied as query
-parameters, and the `body` is encoded by its type:
-
-| `body` type | Sent as |
-| --- | --- |
-| object | snake_case JSON — camelCase properties become snake_case keys, and null properties are dropped |
-| array | JSON, exactly as given |
-| string | the raw string, untouched — for APIs that do not speak JSON |
-| `null` (default) | no body |
-
-Per-call `headers` are set on the request and win over the client's defaults, so
-a raw body can declare its own `Content-Type`:
-
-```php
-$this->client->request(
-    Method::POST,
-    '/orders',
-    body: '<order><id>1</id></order>',
-    headers: ['Content-Type' => 'application/xml'],
-);
-```
-
-### Failed requests
-
-The Data Object methods — `dataObject()` and `dataObjects()` —
-throw `RequestFailed` when the request did not come back 2xx, before they read
-the body. Asking for a Data Object asserts the request succeeded, so a failed
-response surfaces the failed status rather than a mapping or reading error:
-
-```php
-try {
-    $user = $this->client->request(Method::GET, "/users/{$id}")
-        ->dataObject(UserDataObject::class);
-} catch (RequestFailed $exception) {
-    // $exception->response is the failed Response
-    $status = $exception->response->status();
-}
-```
-
-Everything else only reports failure: `failed()`, `successful()`, `status()`,
-`json()`, `body()` and the header methods never throw on a failed response.
+## Requests
 
 ### Query parameters
 
@@ -260,20 +251,17 @@ conditionals, and the key format is whatever your API expects:
 
 ```php
 // Optional filters — null is dropped
-$this->client->request(Method::GET, '/users', query: [
+$this->request(Method::GET, '/users', query: [
     'status' => 'active',
     'q'      => $search ?: null,
 ]);
 
 // Bracket and underscore notation both pass through untouched
-$this->client->request(Method::GET, '/products', query: [
+$this->request(Method::GET, '/products', query: [
     'filter[price][gte]' => 100,
     'price_lte'          => 500,
 ]);
 ```
-
-Parameters already present in the `$uri` are preserved; the `query` array merges
-over them.
 
 #### Value handling
 
@@ -291,18 +279,50 @@ Values are normalised when the query string is built:
 
 Anything else throws an `InvalidArgumentException` naming the offending filter.
 
-Query parameters already present on the request are preserved; filters merge over
-them, and bracketed keys merge key by key rather than colliding. Values are encoded
-per RFC 3986, so spaces become `%20` rather than `+`.
+Query parameters already in the `$uri` are preserved; the `query` array merges
+over them, and bracketed keys merge key by key rather than colliding. Values are
+encoded per RFC 3986, so spaces become `%20` rather than `+`. A `$uri` given no
+`query` array is sent exactly as written.
+
+### Payloads
+
+`payload()` encodes a body by its type:
+
+| Given | Sent as |
+| --- | --- |
+| object | snake_case JSON — camelCase properties become snake_case keys, and null properties are dropped |
+| array | JSON, exactly as given |
+| string | the raw string, untouched — for APIs that do not speak JSON |
+
+### Failed requests
+
+The Data Object methods — `dataObject()` and `dataObjects()` —
+throw `RequestFailed` when the request did not come back 2xx, before they read
+the body. Asking for a Data Object asserts the request succeeded, so a failed
+response surfaces the failed status rather than a mapping or reading error:
+
+```php
+try {
+    $user = $acme->users()->show($id);
+} catch (RequestFailed $exception) {
+    // $exception->response is the failed Response
+    $status = $exception->response->status();
+}
+```
+
+Everything else only reports failure: `failed()`, `successful()`, `status()`,
+`json()`, `body()` and the header methods never throw on a failed response.
+Call `throw()` to ask for it.
 
 ## Testing your SDK
 
 Tests shouldn't hit the network, and you shouldn't have to wire a mock to avoid
-it. `Rooberthh\Sdk\Testing\FakeTransport` is a Transport you hand your Client a
-table of canned responses and plug straight into a `Builder`:
+it. `Rooberthh\Sdk\Testing\FakeTransport` is a PSR-18 client you hand a table of
+canned responses, and give to your Client with `client()`:
 
 ```php
 use Psr\Http\Message\RequestInterface;
+use Rooberthh\Sdk\Auth\BearerToken;
 use Rooberthh\Sdk\Testing\FakeResponse;
 use Rooberthh\Sdk\Testing\FakeTransport;
 
@@ -312,7 +332,7 @@ $fake = new FakeTransport([
     'users/*'     => FakeResponse::status(404),
 ]);
 
-$client = new MyApiClient(url: 'https://api.example.com', token: 't', builder: $fake->builder());
+$acme = (new Acme('https://api.acme.test', new BearerToken('t')))->client($fake);
 ```
 
 Each key is an optional HTTP method, a space, then a path pattern matched against
@@ -324,13 +344,12 @@ for `FakeResponse::json()`), or a `Closure(RequestInterface): ResponseInterface`
 dynamic responses.
 
 The fake sits at the end of the plugin chain, so every recorded request is exactly
-what would have gone over the wire — auth and default headers included. Assert on
-them with the assertions (they use `PHPUnit\Framework\Assert`, so they work in both
-PHPUnit and Pest):
+what would have gone over the wire — credentials and default headers included.
+Assert on them with the assertions (they use `PHPUnit\Framework\Assert`, so they
+work in both PHPUnit and Pest):
 
 ```php
-$fake->assertSent(fn (RequestInterface $r) => $r->getMethod() === 'POST'
-    && json_decode((string) $r->getBody(), true)['name'] === 'Ada');
+$fake->assertSent(fn (RequestInterface $r) => $r->getHeaderLine('Authorization') === 'Bearer t');
 
 $fake->assertNotSent(fn (RequestInterface $r) => $r->getMethod() === 'DELETE');
 $fake->assertSentCount(1);
@@ -346,29 +365,28 @@ falls back to a silent default.
 
 ## Advanced Usage
 
-### The Transport
+### Plugins
 
-Every request passes through a plugin chain held by a `Builder`. Plugins can be
-added and removed at any point, and the Transport is rebuilt on the next request.
-The builder passed in is copied, so one `Builder` can safely be reused across
-several clients:
+Every request passes through a plugin chain. The Consumer adds to it with
+`setup()`, at any time:
 
 ```php
 use Http\Client\Common\Plugin\RetryPlugin;
 
-$client->builder()->addPlugin(new RetryPlugin(['retries' => 3]));
-$client->builder()->removePlugin(RetryPlugin::class);
+$acme = (new Acme('https://api.acme.test', new BearerToken($token)))
+    ->setup([new RetryPlugin(['retries' => 3])]);
 ```
 
 Anything implementing `Http\Client\Common\Plugin` fits here — logging,
 retries, redirects, recording. `php-http/cache-plugin` adds HTTP response
 caching if you install it.
 
-To apply plugins to every client of a given SDK instead, override
-`defaultPlugins()`:
+An SDK Author applies plugins to every Client of their SDK by overriding
+`defaultPlugins()`. They run after the default headers and before the
+Consumer's `setup()` plugins:
 
 ```php
-class MyApiClient extends Client implements AuthenticationContract
+final class Acme extends Client
 {
     protected function defaultPlugins(): array
     {
@@ -383,6 +401,15 @@ failures are reported by `$response->failed()` and thrown only when you call
 since retrying a request that is not idempotent is the SDK author's call to
 make.
 
+### Your own HTTP client
+
+The PSR-18 client is discovered from whatever is installed. To send through a
+particular one, pass it to `client()`; plugins still apply:
+
+```php
+$acme = (new Acme('https://api.acme.test'))->client($myPsr18Client);
+```
+
 ### Reading the last response
 
 Resource methods usually return data objects, which discards the response they
@@ -390,24 +417,25 @@ came from. `getLastResponse()` gets it back — for pagination links, rate limit
 headers, or request ids:
 
 ```php
-$users = $client->users()->list();          // list<UserDataObject>
+$users = $acme->users()->list();          // list<User>
 
-$client->getLastResponse()?->header('X-RateLimit-Remaining');
-$client->getLastResponse()?->status();
+$acme->getLastResponse()?->header('X-RateLimit-Remaining');
+$acme->getLastResponse()?->status();
 ```
 
 ### Custom headers
-Override `defaultHeaders()` in your client:
+
+Override `defaultHeaders()` in your Client. It is read on the first request, so
+it may use properties your constructor assigns after `parent::__construct()`:
 
 ```php
-class MyApiClient extends Client implements AuthenticationContract
+final class Acme extends Client
 {
     protected function defaultHeaders(): array
     {
         return [
             'Accept' => 'application/json',
-            'User-Agent' => 'MySDK/1.0',
-            'X-Custom-Header' => 'value',
+            'User-Agent' => 'AcmeSDK/1.0',
         ];
     }
 }
