@@ -13,7 +13,7 @@ responses, and authentication the Consumer chooses.
 ## Dependencies
 
 - `php-http/client-common` - the plugin chain requests pass through
-- `php-http/message` - the `Authentication` interface every auth strategy implements
+- `php-http/message` - the authentication strategies (`Bearer`, `BasicAuth`, `Header`, …)
 - `php-http/discovery` - finds your installed PSR-18 client and PSR-17 factories
 - `cuyz/valinor` - maps API responses onto data objects
 - `rooberthh/http-tools` - HTTP utilities
@@ -156,11 +156,11 @@ The Consumer constructs the Client with the API's URL and the credentials they
 hold:
 
 ```php
-use Rooberthh\Sdk\Auth\BearerToken;
+use Http\Message\Authentication\Bearer;
 
 $acme = new Acme(
     url: 'https://api.acme.test',
-    auth: new BearerToken($token),
+    auth: new Bearer($token),
 );
 
 $user = $acme->users()->show(1);
@@ -170,19 +170,20 @@ echo $user->name;
 ## Authentication
 
 Authentication is the Consumer's choice: whatever strategy is passed to the
-constructor is applied to every request. These ship ready-made:
+constructor is applied to every request. A strategy is any
+`Http\Message\Authentication`, and `php-http/message` ships the common ones:
 
 | Strategy | Sends |
 | --- | --- |
-| `new BearerToken($token)` | `Authorization: Bearer <token>` |
+| `new Bearer($token)` | `Authorization: Bearer <token>` |
 | `new BasicAuth($username, $password)` | `Authorization: Basic <base64>` |
-| `ApiKey::header('X-Api-Key', $key)` | the key in the header you name |
-| `ApiKey::query('api_key', $key)` | the key as a query parameter, after the query already there |
-| `new NoAuth()` | nothing — the request as it is |
+| `new Header('X-Api-Key', $key)` | any header you name |
+| `new Wsse($username, $password)` | a WSSE token |
+| `new Chain([...])` | several of the above, in order |
 
-All of them live in `Rooberthh\Sdk\Auth` and implement
-`Http\Message\Authentication`, so anything else that does fits too —
-`php-http/message`'s `Wsse` and `Chain`, or your own:
+They live in `Http\Message\Authentication`. Anything else is your own — it is
+handed the request and returns it authenticated, so request signing belongs
+here:
 
 ```php
 use Http\Message\Authentication;
@@ -204,9 +205,11 @@ final class HmacSignature implements Authentication
 ### Per-request authentication
 
 A Resource can send one request with other credentials, or with none, by
-passing them to `send()`:
+passing them to `send()`. `Rooberthh\Sdk\Auth\NoAuth` sends the request as it
+is:
 
 ```php
+use Http\Message\Authentication\BasicAuth;
 use Rooberthh\Sdk\Auth\NoAuth;
 
 public function status(): Response
@@ -236,7 +239,7 @@ final class Acme extends Client
 {
     public function __construct(string $token, string $url = 'https://api.acme.test')
     {
-        parent::__construct($url, new BearerToken($token));
+        parent::__construct($url, new Bearer($token));
     }
 }
 ```
@@ -322,7 +325,7 @@ canned responses, and give to your Client with `client()`:
 
 ```php
 use Psr\Http\Message\RequestInterface;
-use Rooberthh\Sdk\Auth\BearerToken;
+use Http\Message\Authentication\Bearer;
 use Rooberthh\Sdk\Testing\FakeResponse;
 use Rooberthh\Sdk\Testing\FakeTransport;
 
@@ -332,7 +335,7 @@ $fake = new FakeTransport([
     'users/*'     => FakeResponse::status(404),
 ]);
 
-$acme = (new Acme('https://api.acme.test', new BearerToken('t')))->client($fake);
+$acme = (new Acme('https://api.acme.test', new Bearer('t')))->client($fake);
 ```
 
 Each key is an optional HTTP method, a space, then a path pattern matched against
@@ -373,7 +376,7 @@ Every request passes through a plugin chain. The Consumer adds to it with
 ```php
 use Http\Client\Common\Plugin\RetryPlugin;
 
-$acme = (new Acme('https://api.acme.test', new BearerToken($token)))
+$acme = (new Acme('https://api.acme.test', new Bearer($token)))
     ->setup([new RetryPlugin(['retries' => 3])]);
 ```
 

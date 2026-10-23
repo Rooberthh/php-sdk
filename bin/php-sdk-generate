@@ -255,7 +255,7 @@ echo "\n";
 echo "Usage example:\n";
 echo "  \$client = new {$namespace}\\{$clientClassName}(\n";
 echo "      url: 'https://api.example.com',\n";
-echo "      auth: new Rooberthh\\Sdk\\Auth\\BearerToken('your-api-token'),\n";
+echo "      auth: new Http\\Message\\Authentication\\Bearer('your-api-token'),\n";
 echo "  );\n";
 echo "  \$user = \$client->users()->show(1);\n";
 echo "  echo \$user->name;\n";

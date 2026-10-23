@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Rooberthh\Sdk\Tests\Feature;
 
+use Http\Message\Authentication\Bearer;
 use Psr\Http\Message\RequestInterface;
-use Rooberthh\Sdk\Auth\BearerToken;
 use Rooberthh\Sdk\Testing\FakeResponse;
 use Rooberthh\Sdk\Testing\FakeTransport;
 use Rooberthh\Sdk\Tests\Stubs\DataObjects\TestDataObject;
@@ -19,7 +19,7 @@ it('serves data objects to a resource and records the authenticated request', fu
         ]),
     ]);
 
-    $client = (new MockClient('https://api.example.com', new BearerToken('secret-token')))->client($fake);
+    $client = (new MockClient('https://api.example.com', new Bearer('secret-token')))->client($fake);
 
     $objects = $client->tests()->list();
 
