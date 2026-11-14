@@ -18,23 +18,23 @@ function sendWith(array $headers, ?RequestContract $request = null): RequestInte
     $http = mockHttp();
     $http->addResponse(new Response(200));
 
-    (new Connector('https://api.example.com', headers: $headers, http: $http))->send($request ?? request());
+    new Connector('https://api.example.com', headers: $headers, http: $http)->send($request ?? request());
 
     return $http->getLastRequest();
 }
 
-it('sends the default headers', function () {
+it('sends the default headers', function (): void {
     $sent = sendWith([]);
 
     expect($sent->getHeaderLine('Accept'))->toBe('application/json')
         ->and($sent->getHeaderLine('User-Agent'))->toStartWith('php-sdk/');
 });
 
-it('sends the Consumer headers with every request', function () {
+it('sends the Consumer headers with every request', function (): void {
     expect(sendWith(['X-Tenant' => 'acme'])->getHeaderLine('X-Tenant'))->toBe('acme');
 });
 
-it('lets a Consumer header replace a default of the same name', function () {
+it('lets a Consumer header replace a default of the same name', function (): void {
     $sent = sendWith(['Accept' => 'application/xml', 'User-Agent' => 'my-app/1.0']);
 
     expect($sent->getHeaderLine('Accept'))->toBe('application/xml')

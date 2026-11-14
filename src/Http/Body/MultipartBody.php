@@ -34,7 +34,7 @@ final readonly class MultipartBody implements BodyContract
         foreach ($fields as $name => $value) {
             foreach (is_array($value) ? $value : [$value] as $part) {
                 if ($part !== null) {
-                    self::add($builder, $name, $part);
+                    $this->add($builder, $name, $part);
                 }
             }
         }
@@ -58,11 +58,11 @@ final readonly class MultipartBody implements BodyContract
      * @param string                 $name
      * @param File|float|int|string  $part
      */
-    private static function add(MultipartStreamBuilder $builder, string $name, File|float|int|string $part): void
+    private function add(MultipartStreamBuilder $builder, string $name, File|float|int|string $part): void
     {
         // The builder writes names and filenames into the part's headers
         // unescaped, so the Content-Disposition is built here.
-        $disposition = sprintf('form-data; name="%s"', self::escape($name));
+        $disposition = sprintf('form-data; name="%s"', $this->escape($name));
 
         if (!$part instanceof File) {
             $builder->addResource($name, (string) $part, ['headers' => ['Content-Disposition' => $disposition]]);
@@ -70,7 +70,7 @@ final readonly class MultipartBody implements BodyContract
             return;
         }
 
-        $headers = ['Content-Disposition' => sprintf('%s; filename="%s"', $disposition, self::escape($part->filename))];
+        $headers = ['Content-Disposition' => sprintf('%s; filename="%s"', $disposition, $this->escape($part->filename))];
 
         if ($part->contentType !== null) {
             $headers['Content-Type'] = $part->contentType;
@@ -86,7 +86,7 @@ final readonly class MultipartBody implements BodyContract
      *
      * @param string $value
      */
-    private static function escape(string $value): string
+    private function escape(string $value): string
     {
         return str_replace(['"', "\r", "\n"], ['%22', '%0D', '%0A'], $value);
     }

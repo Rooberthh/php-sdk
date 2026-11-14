@@ -5,8 +5,8 @@ declare(strict_types=1);
 use Rooberthh\Sdk\Exceptions\UnsafeUri;
 use Rooberthh\Sdk\Http\BaseUri;
 
-it('appends request paths to the base path', function (string $base, string $path, string $expected) {
-    expect((new BaseUri($base))->resolve($path)->toString())->toBe($expected);
+it('appends request paths to the base path', function (string $base, string $path, string $expected): void {
+    expect(new BaseUri($base)->resolve($path)->toString())->toBe($expected);
 })->with([
     'no base path'                  => ['https://api.example.com', 'emails', 'https://api.example.com/emails'],
     'base path without slash'       => ['https://api.example.com/v2', 'emails', 'https://api.example.com/v2/emails'],
@@ -16,12 +16,12 @@ it('appends request paths to the base path', function (string $base, string $pat
     'port is kept'                  => ['http://localhost:8080/api', 'users', 'http://localhost:8080/api/users'],
 ]);
 
-it('normalises the base', function () {
-    expect((new BaseUri('HTTPS://API.Example.com/v2'))->toString())->toBe('https://api.example.com/v2/')
-        ->and((new BaseUri('https://api.example.com/v2'))->scheme())->toBe('https');
+it('normalises the base', function (): void {
+    expect(new BaseUri('HTTPS://API.Example.com/v2')->toString())->toBe('https://api.example.com/v2/')
+        ->and(new BaseUri('https://api.example.com/v2')->scheme())->toBe('https');
 });
 
-it('refuses a base that is not safe', function (string $base) {
+it('refuses a base that is not safe', function (string $base): void {
     new BaseUri($base);
 })->with([
     'relative'     => '/v2',
@@ -32,8 +32,8 @@ it('refuses a base that is not safe', function (string $base) {
     'credentials'  => 'https://user:pass@api.example.com',
 ])->throws(UnsafeUri::class);
 
-it('refuses a path that would leave the base', function (string $path) {
-    (new BaseUri('https://api.example.com/v2'))->resolve($path);
+it('refuses a path that would leave the base', function (string $path): void {
+    new BaseUri('https://api.example.com/v2')->resolve($path);
 })->with([
     'absolute URL'         => 'https://evil.example.com/steal',
     'scheme-relative'      => '//evil.example.com/steal',
@@ -45,7 +45,7 @@ it('refuses a path that would leave the base', function (string $path) {
     'invalid'              => 'emails/a b',
 ])->throws(UnsafeUri::class);
 
-it('allows absolute URIs under the base, such as next links', function () {
+it('allows absolute URIs under the base, such as next links', function (): void {
     $base = new BaseUri('https://api.example.com/v2');
 
     expect($base->allows('https://api.example.com/v2/emails?after=abc'))->toBeTrue()

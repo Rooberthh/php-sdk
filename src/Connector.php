@@ -127,11 +127,11 @@ class Connector
     {
         $psr = $this->toPsr($request);
 
-        if ($this->auth !== null) {
+        if ($this->auth instanceof Authentication) {
             $psr = $this->auth->authenticate($psr);
         }
 
-        $client = (new PluginClientFactory())->createClient($this->http, [
+        $client = new PluginClientFactory()->createClient($this->http, [
             new HeaderDefaultsPlugin($this->headers),
             ...$this->plugins,
         ]);

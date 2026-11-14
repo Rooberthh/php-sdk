@@ -40,7 +40,7 @@ final readonly class Query
 
             foreach (is_array($value) ? $value : [$value] as $part) {
                 if ($part !== null) {
-                    $pairs[] = rawurlencode((string) $name) . '=' . rawurlencode(self::format($part));
+                    $pairs[] = rawurlencode((string) $name) . '=' . rawurlencode($this->format($part));
                 }
             }
         }
@@ -64,7 +64,7 @@ final readonly class Query
     /**
      * @param bool|float|int|string $value
      */
-    private static function format(bool|float|int|string $value): string
+    private function format(bool|float|int|string $value): string
     {
         return is_bool($value) ? ($value ? 'true' : 'false') : (string) $value;
     }

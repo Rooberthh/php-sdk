@@ -27,7 +27,7 @@ final readonly class BaseUri
     {
         $parsed = Uri::parse($uri);
 
-        if ($parsed === null || $parsed->getScheme() === null || $parsed->getHost() === null || $parsed->getHost() === '') {
+        if (!$parsed instanceof Uri || $parsed->getScheme() === null || $parsed->getHost() === null || $parsed->getHost() === '') {
             throw UnsafeUri::notAbsolute($uri);
         }
 
@@ -68,7 +68,7 @@ final readonly class BaseUri
 
         $resolved = Uri::parse(ltrim($path, '/'), $this->uri);
 
-        if ($resolved === null) {
+        if (!$resolved instanceof Uri) {
             throw UnsafeUri::invalidPath($path);
         }
 
@@ -88,7 +88,7 @@ final readonly class BaseUri
     {
         $parsed = Uri::parse($uri);
 
-        return $parsed !== null && $this->contains($parsed);
+        return $parsed instanceof Uri && $this->contains($parsed);
     }
 
     public function scheme(): string

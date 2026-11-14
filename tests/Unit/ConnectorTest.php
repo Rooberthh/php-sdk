@@ -90,12 +90,12 @@ function requestWithQuery(array $query): RequestContract
     };
 }
 
-beforeEach(function () {
+beforeEach(function (): void {
     $this->http = mockHttp();
     $this->connector = new Connector('https://api.example.com/v2', new Bearer('connector-token'), http: $this->http);
 });
 
-it('sends the Request method to its path under the base URI, with no body', function () {
+it('sends the Request method to its path under the base URI, with no body', function (): void {
     $this->http->addResponse(new Response(200));
 
     $this->connector->send(request(Method::PUT, '/emails/1'));
@@ -107,7 +107,7 @@ it('sends the Request method to its path under the base URI, with no body', func
         ->and((string) $sent->getBody())->toBe('');
 });
 
-it('sends the Query of a Request that has one', function () {
+it('sends the Query of a Request that has one', function (): void {
     $this->http->addResponse(new Response(200));
 
     $this->connector->send(requestWithQuery(['status' => 'sent', 'page' => 2]));
@@ -116,7 +116,7 @@ it('sends the Query of a Request that has one', function () {
         ->toBe('https://api.example.com/v2/emails?status=sent&page=2');
 });
 
-it('sends no query string when every Query value is null', function () {
+it('sends no query string when every Query value is null', function (): void {
     $this->http->addResponse(new Response(200));
 
     $this->connector->send(requestWithQuery(['status' => null]));
@@ -124,7 +124,7 @@ it('sends no query string when every Query value is null', function () {
     expect((string) $this->http->getLastRequest()->getUri())->toBe('https://api.example.com/v2/emails');
 });
 
-it('keeps a Query value that looks like a path or fragment inside the query', function () {
+it('keeps a Query value that looks like a path or fragment inside the query', function (): void {
     $this->http->addResponse(new Response(200));
 
     $this->connector->send(requestWithQuery(['next' => '../../admin#x', 'host' => '//evil.example.com']));
@@ -137,7 +137,7 @@ it('keeps a Query value that looks like a path or fragment inside the query', fu
         ->and($uri->getQuery())->toBe('next=..%2F..%2Fadmin%23x&host=%2F%2Fevil.example.com');
 });
 
-it('sends the Body of a Request that has one, with its Content-Type', function () {
+it('sends the Body of a Request that has one, with its Content-Type', function (): void {
     $this->http->addResponse(new Response(200));
 
     $this->connector->send(requestWithBody(new FormBody(['name' => 'Acme'])));
@@ -148,7 +148,7 @@ it('sends the Body of a Request that has one, with its Content-Type', function (
         ->and($sent->getHeaderLine('Content-Type'))->toBe('application/x-www-form-urlencoded');
 });
 
-it('sends no Content-Type with a Request that has no Body', function () {
+it('sends no Content-Type with a Request that has no Body', function (): void {
     $this->http->addResponse(new Response(200));
 
     $this->connector->send(request());
@@ -156,7 +156,7 @@ it('sends no Content-Type with a Request that has no Body', function () {
     expect($this->http->getLastRequest()->hasHeader('Content-Type'))->toBeFalse();
 });
 
-it("keeps the Body's Content-Type over a Consumer header of the same name", function () {
+it("keeps the Body's Content-Type over a Consumer header of the same name", function (): void {
     $http = mockHttp();
     $http->addResponse(new Response(200));
     $connector = new Connector('https://api.example.com', headers: ['Content-Type' => 'text/plain'], http: $http);
@@ -166,15 +166,15 @@ it("keeps the Body's Content-Type over a Consumer header of the same name", func
     expect($http->getLastRequest()->getHeaderLine('Content-Type'))->toBe('application/json');
 });
 
-it('refuses an unsafe base URI', function () {
+it('refuses an unsafe base URI', function (): void {
     new Connector('https://user:pass@api.example.com');
 })->throws(UnsafeUri::class);
 
-it('refuses a Request path that leaves the base URI', function () {
+it('refuses a Request path that leaves the base URI', function (): void {
     $this->connector->send(request(path: 'https://evil.example.com'));
 })->throws(UnsafeUri::class);
 
-it("authenticates with the Connector's strategy", function () {
+it("authenticates with the Connector's strategy", function (): void {
     $this->http->addResponse(new Response(200));
 
     $this->connector->send(request());
@@ -182,7 +182,7 @@ it("authenticates with the Connector's strategy", function () {
     expect($this->http->getLastRequest()->getHeaderLine('Authorization'))->toBe('Bearer connector-token');
 });
 
-it('returns the Request result', function () {
+it('returns the Request result', function (): void {
     $this->http->addResponse(new Response(200, [], '{"id":1}'));
 
     $request = new readonly class implements RequestContract {
@@ -205,14 +205,14 @@ it('returns the Request result', function () {
     expect($this->connector->send($request))->toBe(1);
 });
 
-it('returns the response itself from raw()', function () {
+it('returns the response itself from raw()', function (): void {
     $response = new Response(202);
     $this->http->addResponse($response);
 
     expect($this->connector->raw(request()))->toBe($response);
 });
 
-it('can send the same Request again', function () {
+it('can send the same Request again', function (): void {
     $this->http->addResponse(new Response(200));
     $this->http->addResponse(new Response(200));
     $request = request(path: 'emails/1');
