@@ -19,9 +19,10 @@
 ## Testing
 
 - Tests are written with Pest (`it('...')` closures and the `expect()` API), not PHPUnit test classes.
-- `tests/Unit` covers single classes; `tests/Feature` covers flows through the client (requests, request payloads, the fake transport).
-- Test doubles live in `tests/Stubs`; JSON response fixtures live in `tests/Fixtures`.
-- HTTP is faked with `Rooberthh\Sdk\Testing\FakeTransport`, handed to the client with `->client($fake)`; tests never hit the network. The `fakeClient()`/`sent()` helpers in `tests/Pest.php` cover the common case.
+- `tests/Unit` covers single classes; `tests/Feature` covers flows through an SDK built on the Connector (requests, request payloads, response mapping).
+- `tests/Fixtures/Acme` is a fixture SDK for a fictional Acme API (`AcmeConnector`, Resources, Data Objects, Payloads), built the way an SDK Author would. Feature tests drive it end to end; extend it when a new framework feature needs an SDK to exercise it. Its JSON response bodies live in `tests/Fixtures/Acme/responses`.
+- HTTP is faked with `php-http/mock-client` (`Http\Mock\Client`), passed as the Connector's `$http` argument or through `->client()`; tests never hit the network. Queue answers with `addResponse()`/`addException()`, or `on($matcher, $result)` to match the request, and assert on `getLastRequest()`/`getRequests()`, which hold each request as it went over the wire (after auth and plugins). Don't write a hand-rolled PSR-18 fake.
+- The mock answers an empty 200 when nothing is queued, so set `setDefaultException()` with an `Http\Client\Exception` (e.g. `TransferException`) to make an unexpected request fail the test. It throws all queued exceptions before any queued response; use `on()` to interleave them.
 
 ## Architecture
 
