@@ -28,6 +28,10 @@ _Avoid_: SDK, connector, API
 A group of operations an SDK exposes for one kind of thing in the API, reached from the Client or, when nested, from another Resource. Operations that concern no particular kind of thing may sit on the Client directly.
 _Avoid_: Endpoint, service, repository
 
+**Request**:
+One operation of the API, declared as a class by the SDK Author: its method, its path, and what its result is. The Consumer sends it through the Client, either directly or by calling a Resource method that sends it.
+_Avoid_: Endpoint, call, action; "request" for the HTTP message the Client builds from it
+
 **Transport**:
 The component that actually sends HTTP requests on the Client's behalf.
 _Avoid_: HTTP client, adapter
@@ -42,6 +46,10 @@ _Avoid_: Auth, credentials (for the strategy itself), auth type
 The data an SDK sends to the API with a request. The outbound counterpart of a Data Object.
 _Avoid_: Request DTO, input, body
 
+**Body**:
+A Payload encoded for sending (as JSON, a form, a multipart upload, or content the Request encoded itself), together with the Content-Type that says how.
+_Avoid_: Using "body" for the Payload itself
+
 **Data Object**:
 A typed representation of something the API sent back.
 _Avoid_: DTO, model, entity
@@ -50,6 +58,10 @@ _Avoid_: DTO, model, entity
 The wrapper an API puts around the data it returns, often alongside metadata about it.
 _Avoid_: Wrapper, container
 
+**Query**:
+The parameters a Request sends in the URI's query string: its Filters, sorting, pagination, includes and the like. Never part of the Request's path.
+_Avoid_: Query string (for the parameters rather than their encoding), params
+
 **Filter**:
-A criterion that narrows which records the API returns. Sorting, includes and field selection are not Filters.
+A criterion that narrows which records the API returns, usually sent in the Query. Sorting, includes and field selection are not Filters.
 _Avoid_: Query param, where clause, constraint

@@ -2,36 +2,54 @@
 
 declare(strict_types=1);
 
-use Http\Message\Authentication;
-use Rooberthh\Sdk\Client;
-use Rooberthh\Sdk\Testing\FakeTransport;
-use Rooberthh\Sdk\Tests\Stubs\MockClient;
-use Psr\Http\Message\RequestInterface;
+use Http\Client\Exception\TransferException;
+use Http\Mock\Client as MockClient;
+use Psr\Http\Message\ResponseInterface;
+use Rooberthh\HttpTools\Enums\Method;
+use Rooberthh\Sdk\Contracts\RequestContract;
 
 /**
- * A client sending through a FakeTransport that answers every request with
- * `{}`, plus the fake, to assert on what went over the wire.
- *
- * @template T of Client
- *
- * @param  class-string<T>     $class
- * @param  string              $url
- * @param  null|Authentication $auth
- * @return array{0: T, 1: FakeTransport}
+ * A mock Transport that fails the test on a request with no response queued,
+ * rather than answering the empty 200 it would by default.
  */
-function fakeClient(string $class = MockClient::class, string $url = 'https://api.mock.com', ?Authentication $auth = null): array
+function mockHttp(): MockClient
 {
-    $fake = new FakeTransport(['*' => []]);
+    $http = new MockClient();
+    $http->setDefaultException(new TransferException('No response queued for this request.'));
 
-    return [(new $class($url, $auth))->client($fake), $fake];
+    return $http;
 }
 
 /**
- * The one request a FakeTransport recorded, or the nth.
- * @param FakeTransport $fake
- * @param int $index
+ * A Request to the given method and path whose result is the response itself,
+ * for testing the Connector without writing a class per case.
+ *
+ * @param Method $method
+ * @param string $path
+ *
+ * @return RequestContract<ResponseInterface>
  */
-function sent(FakeTransport $fake, int $index = 0): RequestInterface
+function request(Method $method = Method::GET, string $path = 'emails'): RequestContract
 {
-    return $fake->recorded()[$index];
+    return new readonly class ($method, $path) implements RequestContract {
+        public function __construct(
+            private Method $method,
+            private string $path,
+        ) {}
+
+        public function method(): Method
+        {
+            return $this->method;
+        }
+
+        public function path(): string
+        {
+            return $this->path;
+        }
+
+        public function result(ResponseInterface $response): ResponseInterface
+        {
+            return $response;
+        }
+    };
 }

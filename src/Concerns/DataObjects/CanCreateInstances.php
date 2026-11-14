@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace Rooberthh\Sdk\Concerns\DataObjects;
 
-use CuyZ\Valinor\Mapper\Configurator\ConvertKeysToCamelCase;
+use CuyZ\Valinor\Mapper\Configurator\MapKeysToCamelCase;
 use CuyZ\Valinor\Mapper\MappingError;
 use CuyZ\Valinor\MapperBuilder;
-use Rooberthh\Sdk\Exceptions\UnableToHydrateResponse;
 
 /**
  * Gives a Data Object the make() that builds it from an API response.
@@ -28,7 +27,7 @@ trait CanCreateInstances
      *
      * @param  array<mixed, mixed> $data
      *
-     * @throws UnableToHydrateResponse
+     * @throws MappingError
      */
     public static function make(array $data): static
     {
@@ -37,17 +36,11 @@ trait CanCreateInstances
         // than once per object.
         static $mapper = null;
 
-        $mapper ??= (new MapperBuilder())
-            // Responses arrive as snake_case; objects declare camelCase.
-            ->configureWith(new ConvertKeysToCamelCase())
-            // APIs add fields without warning; unknown keys must not break consumers.
+        $mapper = new MapperBuilder()
+            ->configureWith(new MapKeysToCamelCase())
             ->allowSuperfluousKeys()
             ->mapper();
 
-        try {
-            return $mapper->map(static::class, $data);
-        } catch (MappingError $error) {
-            throw UnableToHydrateResponse::for(static::class, $error);
-        }
+        return $mapper->map(static::class, $data);
     }
 }

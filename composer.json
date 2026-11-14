@@ -3,9 +3,6 @@
     "description": "A framework for building SDKs in PHP.",
     "type": "library",
     "version": "1.0",
-    "bin": [
-        "bin/php-sdk-generate"
-    ],
     "keywords": [
         "php",
         "sdk"
@@ -23,14 +20,16 @@
     },
     "funding": [],
     "require": {
-        "php": "^8.3",
+        "php": "^8.5",
         "ext-fileinfo": "*",
         "ext-json": "*",
+        "ext-uri": "*",
         "cuyz/valinor": "^2.6",
         "nyholm/psr7": "^1.8.1",
         "php-http/client-common": "^2.7.1",
         "php-http/discovery": "^1.19.2",
         "php-http/message": "^1.16",
+        "php-http/multipart-stream-builder": "^1.4",
         "psr/http-client": "^1.0.3",
         "psr/http-client-implementation": "*",
         "psr/http-factory-implementation": "*",
@@ -40,14 +39,12 @@
     },
     "require-dev": {
         "laravel/pint": "^1.18",
-        "pestphp/pest": "^3.5",
+        "pestphp/pest": "^5.0",
+        "php-http/mock-client": "^1.6",
         "phpstan/phpstan": "^2.0"
     },
     "provide": {
         "psr-discovery/http-client-implementations": "^1.0"
-    },
-    "suggest": {
-        "phpunit/phpunit": "Required to use the FakeTransport assertions."
     },
     "autoload": {
         "psr-4": {
@@ -70,9 +67,6 @@
         "sort-packages": true
     },
     "scripts": {
-        "generate-sdk": [
-            "php bin/php-sdk-generate"
-        ],
         "pint": [
             "./vendor/bin/pint"
         ],
@@ -81,7 +75,6 @@
         ]
     },
     "scripts-descriptions": {
-        "generate-sdk": "Generate a new SDK with authentication and sample resource.",
         "pint": "Run Laravel Pint on the codebase.",
         "stan": "Run PhpStan on the codebase."
     }
