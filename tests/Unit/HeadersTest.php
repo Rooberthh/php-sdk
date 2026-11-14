@@ -3,42 +3,24 @@
 declare(strict_types=1);
 
 use Nyholm\Psr7\Response;
-use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\ResponseInterface;
-use Rooberthh\HttpTools\Enums\Method;
 use Rooberthh\Sdk\Connector;
-
-/**
- * A PSR-18 client that records the request it was sent and answers 200.
- */
-function recordingClient(): ClientInterface
-{
-    return new class implements ClientInterface {
-        public ?RequestInterface $sent = null;
-
-        public function sendRequest(RequestInterface $request): ResponseInterface
-        {
-            $this->sent = $request;
-
-            return new Response(200);
-        }
-    };
-}
+use Rooberthh\Sdk\Contracts\RequestContract;
 
 /**
  * @param array<string, string> $headers
- * @param ?RequestInterface $request
+ * @param ?RequestContract<mixed>        $request
+ *
  * @return RequestInterface the request as it went over the wire
  */
-function sendWith(array $headers, ?RequestInterface $request = null): RequestInterface
+function sendWith(array $headers, ?RequestContract $request = null): RequestInterface
 {
-    $http = recordingClient();
-    $connector = new Connector('https://api.example.com', headers: $headers, http: $http);
+    $http = mockHttp();
+    $http->addResponse(new Response(200));
 
-    $connector->send($request ?? $connector->createRequest(Method::GET, 'emails'));
+    (new Connector('https://api.example.com', headers: $headers, http: $http))->send($request ?? request());
 
-    return $http->sent;
+    return $http->getLastRequest();
 }
 
 it('sends the default headers', function () {
@@ -57,11 +39,4 @@ it('lets a Consumer header replace a default of the same name', function () {
 
     expect($sent->getHeaderLine('Accept'))->toBe('application/xml')
         ->and($sent->getHeaderLine('User-Agent'))->toBe('my-app/1.0');
-});
-
-it('leaves a header the request sets itself alone', function () {
-    $connector = new Connector('https://api.example.com');
-    $request = $connector->createRequest(Method::GET, 'emails')->withHeader('Accept', 'text/csv');
-
-    expect(sendWith(['Accept' => 'application/xml'], $request)->getHeaderLine('Accept'))->toBe('text/csv');
 });

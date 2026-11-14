@@ -3,13 +3,14 @@
 declare(strict_types=1);
 
 use Http\Client\Exception\TransferException;
-use Http\Mock\Client as MockClient;
 use Nyholm\Psr7\Response;
 use Psr\Http\Message\ResponseInterface;
+use Rooberthh\Sdk\Http\File;
 use Rooberthh\Sdk\Tests\Fixtures\Acme\AcmeConnector;
 use Rooberthh\Sdk\Tests\Fixtures\Acme\DataObjects\Project;
 use Rooberthh\Sdk\Tests\Fixtures\Acme\Enums\ProjectStatus;
 use Rooberthh\Sdk\Tests\Fixtures\Acme\Payloads\CreateProjectPayload;
+use Rooberthh\Sdk\Tests\Fixtures\Acme\Requests\Projects\GetProject;
 
 /**
  * A JSON response with the body of `tests/Fixtures/Acme/Responses/{name}.json`.
@@ -27,10 +28,7 @@ function acmeFixture(string $name, int $status = 200): ResponseInterface
 }
 
 beforeEach(function () {
-    $this->http = new MockClient();
-    // The mock answers an empty 200 when nothing is queued, which would let a
-    // test that sends more than it expects pass quietly.
-    $this->http->setDefaultException(new TransferException('No response queued for this request.'));
+    $this->http = mockHttp();
 
     $this->acme = new AcmeConnector('secret-token', $this->http);
 });
@@ -51,15 +49,6 @@ it('lists projects', function () {
         ->and($projects[0]->createdAt->format('Y-m-d'))->toBe('2026-11-01')
         ->and($projects[1]->description)->toBeNull()
         ->and($projects[1]->status)->toBe(ProjectStatus::Archived);
-});
-
-it('filters projects by status', function () {
-    $this->http->addResponse(acmeFixture('projects'));
-
-    $this->acme->projects()->list(ProjectStatus::Archived);
-
-    expect((string) $this->http->getLastRequest()->getUri())
-        ->toBe('https://api.acme.test/v1/projects?status=archived');
 });
 
 it('gets one project', function () {
@@ -89,11 +78,37 @@ it('creates a project', function () {
 
     expect($sent->getMethod())->toBe('POST')
         ->and((string) $sent->getUri())->toBe('https://api.acme.test/v1/projects')
+        ->and($sent->getHeaderLine('Content-Type'))->toBe('application/json')
         ->and(json_decode((string) $sent->getBody(), true))->toBe([
-            'name'        => 'Website relaunch',
+            'name' => 'Website relaunch',
             'description' => 'New marketing site',
         ])
         ->and($project->id)->toBe('prj_1');
+});
+
+it('uploads a project logo', function () {
+    $this->http->addResponse(acmeFixture('project'));
+
+    $this->acme->projects()->uploadLogo('prj_1', File::fromPath(__DIR__ . '/../Fixtures/Acme/files/logo.png'), 'Acme logo');
+
+    $sent = $this->http->getLastRequest();
+    $boundary = str_replace('multipart/form-data; boundary=', '', $sent->getHeaderLine('Content-Type'));
+
+    expect($sent->getMethod())->toBe('POST')
+        ->and((string) $sent->getUri())->toBe('https://api.acme.test/v1/projects/prj_1/logo')
+        ->and($boundary)->not->toBe('')
+        ->and((string) $sent->getBody())->toBe(
+            "--{$boundary}\r\n"
+            . "Content-Disposition: form-data; name=\"logo\"; filename=\"logo.png\"\r\n"
+            . "Content-Type: image/png\r\n"
+            . "\r\n"
+            . "\x89PNG fake logo\r\n"
+            . "--{$boundary}\r\n"
+            . "Content-Disposition: form-data; name=\"alt\"\r\n"
+            . "\r\n"
+            . "Acme logo\r\n"
+            . "--{$boundary}--\r\n",
+        );
 });
 
 it('deletes a project', function () {
@@ -123,3 +138,12 @@ it('authenticates and identifies itself on every request', function () {
 it('fails loudly when a request has no queued response', function () {
     $this->acme->projects()->get('prj_1');
 })->throws(TransferException::class, 'No response queued for this request.');
+
+it('sends a Request on its own, without the Resource', function () {
+    $this->http->addResponse(acmeFixture('project'));
+
+    $project = $this->acme->send(new GetProject('prj_1'));
+
+    expect($project)->toBeInstanceOf(Project::class)
+        ->and((string) $this->http->getLastRequest()->getUri())->toBe('https://api.acme.test/v1/projects/prj_1');
+});

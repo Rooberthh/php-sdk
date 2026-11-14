@@ -23,18 +23,19 @@
         "php": "^8.5",
         "ext-fileinfo": "*",
         "ext-json": "*",
+        "ext-uri": "*",
         "cuyz/valinor": "^2.6",
         "nyholm/psr7": "^1.8.1",
         "php-http/client-common": "^2.7.1",
         "php-http/discovery": "^1.19.2",
         "php-http/message": "^1.16",
+        "php-http/multipart-stream-builder": "^1.4",
         "psr/http-client": "^1.0.3",
         "psr/http-client-implementation": "*",
         "psr/http-factory-implementation": "*",
         "psr/http-message": "^2.0",
         "rooberthh/php-http-tools": "^0.1.1",
-        "symfony/http-client": "^7.2",
-        "ext-uri": "*"
+        "symfony/http-client": "^7.2"
     },
     "require-dev": {
         "laravel/pint": "^1.18",

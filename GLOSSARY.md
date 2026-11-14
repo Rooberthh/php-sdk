@@ -28,6 +28,10 @@ _Avoid_: SDK, connector, API
 A group of operations an SDK exposes for one kind of thing in the API, reached from the Client or, when nested, from another Resource. Operations that concern no particular kind of thing may sit on the Client directly.
 _Avoid_: Endpoint, service, repository
 
+**Request**:
+One operation of the API, declared as a class by the SDK Author: its method, its path, and what its result is. The Consumer sends it through the Client, either directly or by calling a Resource method that sends it.
+_Avoid_: Endpoint, call, action; "request" for the HTTP message the Client builds from it
+
 **Transport**:
 The component that actually sends HTTP requests on the Client's behalf.
 _Avoid_: HTTP client, adapter
@@ -41,6 +45,10 @@ _Avoid_: Auth, credentials (for the strategy itself), auth type
 **Payload**:
 The data an SDK sends to the API with a request. The outbound counterpart of a Data Object.
 _Avoid_: Request DTO, input, body
+
+**Body**:
+A Payload encoded for sending (as JSON, a form, a multipart upload, or content the Request encoded itself), together with the Content-Type that says how.
+_Avoid_: Using "body" for the Payload itself
 
 **Data Object**:
 A typed representation of something the API sent back.

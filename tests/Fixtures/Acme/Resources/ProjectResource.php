@@ -4,16 +4,19 @@ declare(strict_types=1);
 
 namespace Rooberthh\Sdk\Tests\Fixtures\Acme\Resources;
 
-use Psr\Http\Message\ResponseInterface;
-use Rooberthh\HttpTools\Enums\Method;
+use Rooberthh\Sdk\Http\File;
 use Rooberthh\Sdk\Tests\Fixtures\Acme\AcmeConnector;
 use Rooberthh\Sdk\Tests\Fixtures\Acme\DataObjects\Project;
-use Rooberthh\Sdk\Tests\Fixtures\Acme\Enums\ProjectStatus;
 use Rooberthh\Sdk\Tests\Fixtures\Acme\Payloads\CreateProjectPayload;
+use Rooberthh\Sdk\Tests\Fixtures\Acme\Requests\Projects\CreateProject;
+use Rooberthh\Sdk\Tests\Fixtures\Acme\Requests\Projects\DeleteProject;
+use Rooberthh\Sdk\Tests\Fixtures\Acme\Requests\Projects\GetProject;
+use Rooberthh\Sdk\Tests\Fixtures\Acme\Requests\Projects\ListProjects;
+use Rooberthh\Sdk\Tests\Fixtures\Acme\Requests\Projects\UploadProjectLogo;
 
 /**
- * The operations on Acme projects. The API wraps every result in a `data`
- * Envelope.
+ * The operations on Acme projects, as methods. Each one only creates its
+ * Request and sends it, so a Consumer can send the Requests directly instead.
  */
 final readonly class ProjectResource
 {
@@ -22,20 +25,11 @@ final readonly class ProjectResource
     ) {}
 
     /**
-     * @param ?ProjectStatus $status only projects with this status; all of them when null
-     *
      * @return list<Project>
      */
-    public function list(?ProjectStatus $status = null): array
+    public function list(): array
     {
-        $request = $this->acme->createRequest(Method::GET, 'projects', [
-            'status' => $status?->value,
-        ]);
-
-        return array_map(
-            Project::make(...),
-            $this->data($this->acme->send($request)),
-        );
+        return $this->acme->send(new ListProjects());
     }
 
     /**
@@ -43,9 +37,7 @@ final readonly class ProjectResource
      */
     public function get(string $id): Project
     {
-        $request = $this->acme->createRequest(Method::GET, 'projects/' . rawurlencode($id));
-
-        return Project::make($this->data($this->acme->send($request)));
+        return $this->acme->send(new GetProject($id));
     }
 
     /**
@@ -53,10 +45,17 @@ final readonly class ProjectResource
      */
     public function create(CreateProjectPayload $payload): Project
     {
-        $request = $this->acme->createRequest(Method::POST, 'projects')
-            ->withBody($this->acme->createPayload($payload));
+        return $this->acme->send(new CreateProject($payload));
+    }
 
-        return Project::make($this->data($this->acme->send($request)));
+    /**
+     * @param string  $id
+     * @param File    $logo
+     * @param ?string $alt text describing the logo, for screen readers
+     */
+    public function uploadLogo(string $id, File $logo, ?string $alt = null): Project
+    {
+        return $this->acme->send(new UploadProjectLogo($id, $logo, $alt));
     }
 
     /**
@@ -64,23 +63,6 @@ final readonly class ProjectResource
      */
     public function delete(string $id): void
     {
-        $this->acme->send(
-            $this->acme->createRequest(Method::DELETE, 'projects/' . rawurlencode($id)),
-        );
-    }
-
-    /**
-     * What is inside the response's `data` Envelope.
-     *
-     * @param ResponseInterface $response
-     *
-     * @return array<mixed, mixed>
-     */
-    private function data(ResponseInterface $response): array
-    {
-        /** @var array{data: array<mixed, mixed>} $decoded */
-        $decoded = json_decode((string) $response->getBody(), true, flags: JSON_THROW_ON_ERROR);
-
-        return $decoded['data'];
+        $this->acme->send(new DeleteProject($id));
     }
 }

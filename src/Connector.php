@@ -10,13 +10,14 @@ use Http\Client\Common\PluginClientFactory;
 use Http\Discovery\Psr17FactoryDiscovery;
 use Http\Discovery\Psr18ClientDiscovery;
 use Http\Message\Authentication;
+use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamFactoryInterface;
-use Psr\Http\Message\StreamInterface;
-use Rooberthh\HttpTools\Enums\Method;
+use Rooberthh\Sdk\Contracts\HasBody;
+use Rooberthh\Sdk\Contracts\RequestContract;
 use Rooberthh\Sdk\Http\BaseUri;
 
 class Connector
@@ -47,7 +48,7 @@ class Connector
      * installed, so nothing else needs wiring up.
      *
      * @param string               $url  the API's base URI; every request path is resolved under it ({@see BaseUri})
-     * @param null|Authentication  $auth applied to every request unless one overrides it ({@see self::send()})
+     * @param null|Authentication  $auth applied to every request
      * @param array<string, string> $headers sent with every request, replacing a default header of the same name
      * @param ?ClientInterface $http
      *
@@ -90,63 +91,40 @@ class Connector
     }
 
     /**
-     * A request to a path under this client's base URI, ready to send.
+     * Send a Request and return its {@see RequestContract::result()}.
      *
-     * The path is resolved by {@see BaseUri::resolve()}, so it can't carry a
-     * query or leave the base. Query parameters go in `$query`: null values are
-     * dropped, so optional Filters can be passed straight through, and the rest
-     * are encoded per RFC 3986.
+     * @template T
      *
-     * @param Method               $method
-     * @param string               $path
-     * @param array<string, mixed> $query
+     * @param RequestContract<T> $request
      *
-     * @throws Exceptions\UnsafeUri when the path would leave the base URI
+     * @throws Exceptions\UnsafeUri when the Request's path would leave the base URI
+     * @throws ClientExceptionInterface when the Transport can't send it
+     *
+     * @return T
      */
-    public function createRequest(Method $method, string $path, array $query = []): RequestInterface
+    public function send(RequestContract $request): mixed
     {
-        $uri = $this->baseUri->resolve($path);
-
-        $query = array_filter($query, static fn(mixed $value): bool => $value !== null);
-
-        if ($query !== []) {
-            $uri = $uri->withQuery(http_build_query($query, encoding_type: PHP_QUERY_RFC3986));
-        }
-
-        return $this->requestFactory->createRequest($method->value, $uri->toString());
+        return $request->result($this->raw($request));
     }
 
     /**
-     * A request body, encoded by type: a string is sent raw, and an array or
-     * object is JSON-encoded as given (an object by its public properties, or
-     * by its {@see \JsonSerializable} implementation).
+     * Send a Request and return the response as it came back.
      *
-     * @param array<mixed, mixed>|object|string $body
-     */
-    public function createPayload(object|array|string $body): StreamInterface
-    {
-        return $this->streamFactory->createStream(match (true) {
-            is_string($body) => $body,
-            default          => json_encode($body, JSON_THROW_ON_ERROR),
-        });
-    }
-
-    /**
-     * Send a request through the Transport.
+     * Authentication is applied before the plugin chain, so every plugin and
+     * the Transport see the request as it goes over the wire. The chain is the
+     * headers, then the plugins added through {@see self::setup()}.
      *
-     * Authentication is applied here, before the plugin chain, so every plugin
-     * and the Transport see the request as it goes over the wire. The chain is
-     * the headers, then the plugins added through {@see self::setup()}. Pass `$auth` to use other credentials for this one
-     * request, or {@see Auth\NoAuth} to send it without any.
-     * @param RequestInterface $request
-     * @param ?Authentication $auth
+     * @param RequestContract<mixed> $request
+     *
+     * @throws Exceptions\UnsafeUri when the Request's path would leave the base URI
+     * @throws ClientExceptionInterface when the Transport can't send it
      */
-    public function send(RequestInterface $request, ?Authentication $auth = null): ResponseInterface
+    public function raw(RequestContract $request): ResponseInterface
     {
-        $auth ??= $this->auth;
+        $psr = $this->toPsr($request);
 
-        if ($auth !== null) {
-            $request = $auth->authenticate($request);
+        if ($this->auth !== null) {
+            $psr = $this->auth->authenticate($psr);
         }
 
         $client = (new PluginClientFactory())->createClient($this->http, [
@@ -154,7 +132,35 @@ class Connector
             ...$this->plugins,
         ]);
 
-        return $client->sendRequest($request);
+        return $client->sendRequest($psr);
+    }
+
+    /**
+     * The PSR-7 request a Request describes, before authentication and plugins.
+     * It carries a body, and the Body's Content-Type, only when the Request
+     * implements {@see HasBody}. The Content-Type is set on the request itself,
+     * so a Connector or Consumer header of the same name can't contradict it.
+     *
+     * @param RequestContract<mixed> $request
+     *
+     * @throws Exceptions\UnsafeUri when the path would leave the base URI
+     */
+    private function toPsr(RequestContract $request): RequestInterface
+    {
+        $psr = $this->requestFactory->createRequest(
+            $request->method()->value,
+            $this->baseUri->resolve($request->path())->toString(),
+        );
+
+        if (!$request instanceof HasBody) {
+            return $psr;
+        }
+
+        $body = $request->body();
+
+        return $psr
+            ->withBody(is_string($content = $body->content()) ? $this->streamFactory->createStream($content) : $content)
+            ->withHeader('Content-Type', $body->contentType());
     }
 
     public function baseUri(): BaseUri
@@ -171,9 +177,8 @@ class Connector
     protected function defaultHeaders(): array
     {
         return [
-            'Accept'       => 'application/json',
-            'Content-Type' => 'application/json',
-            'User-Agent'   => $this->userAgentString(),
+            'Accept'     => 'application/json',
+            'User-Agent' => $this->userAgentString(),
         ];
     }
 

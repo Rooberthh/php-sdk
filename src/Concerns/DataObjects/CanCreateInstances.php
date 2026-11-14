@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Rooberthh\Sdk\Concerns\DataObjects;
 
-use CuyZ\Valinor\Mapper\Configurator\ConvertKeysToCamelCase;
+use CuyZ\Valinor\Mapper\Configurator\MapKeysToCamelCase;
 use CuyZ\Valinor\Mapper\MappingError;
 use CuyZ\Valinor\MapperBuilder;
 
@@ -36,10 +36,8 @@ trait CanCreateInstances
         // than once per object.
         static $mapper = null;
 
-        $mapper ??= (new MapperBuilder())
-            // Responses arrive as snake_case; objects declare camelCase.
-            ->configureWith(new ConvertKeysToCamelCase())
-            // APIs add fields without warning; unknown keys must not break consumers.
+        $mapper = new MapperBuilder()
+            ->configureWith(new MapKeysToCamelCase())
             ->allowSuperfluousKeys()
             ->mapper();
 
