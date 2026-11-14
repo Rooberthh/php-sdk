@@ -27,8 +27,8 @@
 
 - Root namespace is `Rooberthh\Sdk\` (PSR-4 from `src/`).
 - Interfaces live in `Contracts/` with a `Contract` suffix (`ClientContract`, `DataObjectContract`).
-- Reusable behaviour is a trait in `Concerns/`, named `Can…` (`CanCreateInstances`, `CanCreateRequests`).
-- Resources build plain PSR-7 requests with `CanCreateRequests` (`request()`, `payload()`) and send them with `$this->client->send()`; the Client owns URL joining, query normalising and payload encoding.
+- Reusable behaviour is a trait in `Concerns/`, named `Can…` (`CanCreateInstances`).
+- Resources are given the Client through their constructor, build plain PSR-7 requests with `$this->client->createRequest()` / `createPayload()`, and send them with `$this->client->send()`; the Client owns URL joining, query normalising and payload encoding.
 - Authentication strategies are any `Http\Message\Authentication`; use `php-http/message`'s (`Bearer`, `BasicAuth`, `Header`) rather than re-implementing them. `Auth/` holds only what php-http lacks (`NoAuth`). The Consumer passes one to the Client's constructor; `send()` applies it before the plugin chain and accepts a per-request override.
 - Exceptions are `final`, extend an SPL exception, and implement `SdkException` so consumers can catch everything the SDK throws. They are named for what went wrong, without an `Exception` suffix (`RequestFailed`, `UnableToReadResponse`), and are built through named static constructors (`::with()`, `::for()`, `::missingKey()`) rather than `new`.
 - Data objects implement `DataObjectContract` and hydrate through `CanCreateInstances`: snake_case response keys map to camelCase properties, and unknown keys are ignored so new API fields aren't breaking changes.

@@ -17,7 +17,7 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
 
 # --- agent-kit: PHP + Composer -------------------------------------------
 # PHP from the Sury repository so any 8.x version is available on bookworm.
-ARG PHP_VERSION=8.4
+ARG PHP_VERSION=8.5
 RUN apt-get update && apt-get install -y ca-certificates curl unzip \
   && curl -fsSLo /tmp/debsuryorg-archive-keyring.deb https://packages.sury.org/debsuryorg-archive-keyring.deb \
   && dpkg -i /tmp/debsuryorg-archive-keyring.deb && rm /tmp/debsuryorg-archive-keyring.deb \
