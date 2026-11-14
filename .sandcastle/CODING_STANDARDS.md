@@ -6,6 +6,7 @@
 
 - Every PHP file starts with `declare(strict_types=1);`.
 - Formatting follows Laravel Pint with the `per` preset (`pint.json`). Run `vendor/bin/pint`; don't hand-format against it.
+- Rector (`rector.php`) runs before Pint to keep code on current PHP idioms. Run `composer lint`; don't hand-revert its changes.
 - Import classes with `use` statements instead of writing fully qualified names inline.
 - In PHPDoc, put `null` first in union types (`null|array<mixed, mixed>`) and order tags `@param`, `@throws`, `@return`.
 - Classes are `final` by default; data/value objects are `final readonly`. Use constructor property promotion.

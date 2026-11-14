@@ -35,7 +35,7 @@ If applicable, use RGR to complete the task.
 
 # FEEDBACK LOOPS
 
-Before committing, run `vendor/bin/pint`, `vendor/bin/phpstan analyse` and `vendor/bin/pest` to ensure the tests pass.
+Before committing, run `composer lint` (Rector, Pint, PHPStan) and `vendor/bin/pest` to ensure the tests pass.
 
 # COMMIT
 
