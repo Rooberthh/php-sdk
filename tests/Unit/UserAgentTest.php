@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Rooberthh\Sdk\Connector;
 
-it('sends php-sdk and PHP versions as the default User-Agent', function () {
+it('sends php-sdk and PHP versions as the default User-Agent', function (): void {
     $connector = new class ('https://api.example.com') extends Connector {
         /** @return array<string, string> */
         public function headers(): array
@@ -17,7 +17,7 @@ it('sends php-sdk and PHP versions as the default User-Agent', function () {
         ->toBe('php-sdk/' . Connector::VERSION . ' PHP/' . PHP_VERSION);
 });
 
-it('lets an SDK Author put their own SDK in front', function () {
+it('lets an SDK Author put their own SDK in front', function (): void {
     $connector = new class ('https://api.example.com') extends Connector {
         /** @return array<string, string> */
         public function headers(): array

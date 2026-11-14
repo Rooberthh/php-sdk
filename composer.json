@@ -41,7 +41,8 @@
         "laravel/pint": "^1.18",
         "pestphp/pest": "^5.0",
         "php-http/mock-client": "^1.6",
-        "phpstan/phpstan": "^2.0"
+        "phpstan/phpstan": "^2.0",
+        "rector/rector": "^2.8"
     },
     "provide": {
         "psr-discovery/http-client-implementations": "^1.0"
@@ -72,10 +73,24 @@
         ],
         "stan": [
             "./vendor/bin/phpstan analyse --memory-limit=3g"
+        ],
+        "rector": [
+            "./vendor/bin/rector process"
+        ],
+        "rector:check": [
+            "./vendor/bin/rector process --dry-run"
+        ],
+        "lint": [
+            "@rector",
+            "@pint",
+            "@stan"
         ]
     },
     "scripts-descriptions": {
         "pint": "Run Laravel Pint on the codebase.",
-        "stan": "Run PhpStan on the codebase."
+        "stan": "Run PhpStan on the codebase.",
+        "rector": "Run Rector refactorings on the codebase.",
+        "rector:check": "Show Rector changes without applying them.",
+        "lint": "Run Rector, Pint and PhpStan on the codebase."
     }
 }

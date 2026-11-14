@@ -19,7 +19,7 @@ function multipartParts(MultipartBody $body): array
     return [substr($body->contentType(), strlen('multipart/form-data; boundary=')), (string) $body->content()];
 }
 
-it('sends text fields and files as parts', function () {
+it('sends text fields and files as parts', function (): void {
     [$boundary, $content] = multipartParts(new MultipartBody([
         'name'   => 'Acme',
         'report' => File::fromString('a,b', 'report.csv', 'text/csv'),
@@ -39,13 +39,13 @@ it('sends text fields and files as parts', function () {
     );
 });
 
-it('guesses a missing Content-Type from the filename', function () {
+it('guesses a missing Content-Type from the filename', function (): void {
     [, $content] = multipartParts(new MultipartBody(['logo' => File::fromString('x', 'logo.png')]));
 
     expect($content)->toContain("Content-Type: image/png\r\n");
 });
 
-it('sends a list as several parts under one name, and drops nulls', function () {
+it('sends a list as several parts under one name, and drops nulls', function (): void {
     [, $content] = multipartParts(new MultipartBody([
         'attachments' => [File::fromString('1', 'a.txt'), File::fromString('2', 'b.txt')],
         'note'        => null,
@@ -59,7 +59,7 @@ it('sends a list as several parts under one name, and drops nulls', function () 
         ->and($content)->not->toContain('name="note"');
 });
 
-it('names a file on disk after it, never by its path', function () {
+it('names a file on disk after it, never by its path', function (): void {
     [, $content] = multipartParts(new MultipartBody([
         'logo' => File::fromPath(__DIR__ . '/../../Fixtures/Acme/files/logo.png'),
     ]));
@@ -68,7 +68,7 @@ it('names a file on disk after it, never by its path', function () {
         ->and($content)->not->toContain('Fixtures');
 });
 
-it('sends a stream as it is', function () {
+it('sends a stream as it is', function (): void {
     [, $content] = multipartParts(new MultipartBody([
         'data' => File::fromStream(Stream::create('streamed'), 'data.bin', 'application/octet-stream'),
     ]));
@@ -76,7 +76,7 @@ it('sends a stream as it is', function () {
     expect($content)->toContain("\r\n\r\nstreamed\r\n");
 });
 
-it('escapes quotes and line breaks in names and filenames', function () {
+it('escapes quotes and line breaks in names and filenames', function (): void {
     [, $content] = multipartParts(new MultipartBody([
         "fi\"eld\r\nX-Injected: 1" => File::fromString('x', "a\".png\r\nX-Injected: 1"),
     ]));
@@ -85,6 +85,6 @@ it('escapes quotes and line breaks in names and filenames', function () {
         ->and($content)->not->toContain("\r\nX-Injected");
 });
 
-it('refuses a Content-Type with a line break', function () {
+it('refuses a Content-Type with a line break', function (): void {
     File::fromString('x', 'a.png', "image/png\r\nX-Injected: 1");
 })->throws(InvalidFile::class);

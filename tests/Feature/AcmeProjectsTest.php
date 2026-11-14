@@ -27,13 +27,13 @@ function acmeFixture(string $name, int $status = 200): ResponseInterface
     );
 }
 
-beforeEach(function () {
+beforeEach(function (): void {
     $this->http = mockHttp();
 
     $this->acme = new AcmeConnector('secret-token', $this->http);
 });
 
-it('lists projects', function () {
+it('lists projects', function (): void {
     $this->http->addResponse(acmeFixture('projects'));
 
     $projects = $this->acme->projects()->list();
@@ -51,7 +51,7 @@ it('lists projects', function () {
         ->and($projects[1]->status)->toBe(ProjectStatus::Archived);
 });
 
-it('lists projects filtered by status, a page at a time', function () {
+it('lists projects filtered by status, a page at a time', function (): void {
     $this->http->addResponse(acmeFixture('projects'));
 
     $this->acme->projects()->list(ProjectStatus::Archived, page: 2);
@@ -60,7 +60,7 @@ it('lists projects filtered by status, a page at a time', function () {
         ->toBe('https://api.acme.test/v1/projects?status=archived&page=2');
 });
 
-it('leaves out the filters a Consumer did not give', function () {
+it('leaves out the filters a Consumer did not give', function (): void {
     $this->http->addResponse(acmeFixture('projects'));
 
     $this->acme->projects()->list(page: 3);
@@ -69,7 +69,7 @@ it('leaves out the filters a Consumer did not give', function () {
         ->toBe('https://api.acme.test/v1/projects?page=3');
 });
 
-it('gets one project', function () {
+it('gets one project', function (): void {
     $this->http->addResponse(acmeFixture('project'));
 
     $project = $this->acme->projects()->get('prj_1');
@@ -78,7 +78,7 @@ it('gets one project', function () {
         ->and($project->name)->toBe('Website relaunch');
 });
 
-it('encodes the project id into the path', function () {
+it('encodes the project id into the path', function (): void {
     $this->http->addResponse(acmeFixture('project'));
 
     $this->acme->projects()->get('prj/../admin');
@@ -87,7 +87,7 @@ it('encodes the project id into the path', function () {
         ->toBe('https://api.acme.test/v1/projects/prj%2F..%2Fadmin');
 });
 
-it('creates a project', function () {
+it('creates a project', function (): void {
     $this->http->addResponse(acmeFixture('project', 201));
 
     $project = $this->acme->projects()->create(new CreateProjectPayload('Website relaunch', 'New marketing site'));
@@ -104,7 +104,7 @@ it('creates a project', function () {
         ->and($project->id)->toBe('prj_1');
 });
 
-it('uploads a project logo', function () {
+it('uploads a project logo', function (): void {
     $this->http->addResponse(acmeFixture('project'));
 
     $this->acme->projects()->uploadLogo('prj_1', File::fromPath(__DIR__ . '/../Fixtures/Acme/files/logo.png'), 'Acme logo');
@@ -129,7 +129,7 @@ it('uploads a project logo', function () {
         );
 });
 
-it('deletes a project', function () {
+it('deletes a project', function (): void {
     $this->http->addResponse(new Response(204));
 
     $this->acme->projects()->delete('prj_1');
@@ -140,7 +140,7 @@ it('deletes a project', function () {
         ->and((string) $sent->getUri())->toBe('https://api.acme.test/v1/projects/prj_1');
 });
 
-it('authenticates and identifies itself on every request', function () {
+it('authenticates and identifies itself on every request', function (): void {
     $this->http->addResponse(acmeFixture('projects'));
     $this->http->addResponse(acmeFixture('project'));
 
@@ -153,11 +153,11 @@ it('authenticates and identifies itself on every request', function () {
             ->getHeaderLine('User-Agent')->toStartWith('acme-php/1.0.0 php-sdk/'));
 });
 
-it('fails loudly when a request has no queued response', function () {
+it('fails loudly when a request has no queued response', function (): void {
     $this->acme->projects()->get('prj_1');
 })->throws(TransferException::class, 'No response queued for this request.');
 
-it('sends a Request on its own, without the Resource', function () {
+it('sends a Request on its own, without the Resource', function (): void {
     $this->http->addResponse(acmeFixture('project'));
 
     $project = $this->acme->send(new GetProject('prj_1'));

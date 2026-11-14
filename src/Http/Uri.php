@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Rooberthh\Sdk\Http;
 
+use Stringable;
 use Uri\Rfc3986\Uri as Rfc3986Uri;
 
 /**
@@ -15,7 +16,7 @@ use Uri\Rfc3986\Uri as Rfc3986Uri;
  * the normalised form: scheme and host lowercased, percent-encoded unreserved
  * characters decoded, and dot segments removed on resolution.
  */
-final readonly class Uri
+final readonly class Uri implements Stringable
 {
     private function __construct(
         private Rfc3986Uri $uri,
@@ -32,7 +33,7 @@ final readonly class Uri
     {
         $parsed = Rfc3986Uri::parse($uri, $base?->uri);
 
-        return $parsed === null ? null : new self($parsed);
+        return $parsed instanceof Rfc3986Uri ? new self($parsed) : null;
     }
 
     public function getScheme(): ?string
