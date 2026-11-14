@@ -51,6 +51,24 @@ it('lists projects', function () {
         ->and($projects[1]->status)->toBe(ProjectStatus::Archived);
 });
 
+it('lists projects filtered by status, a page at a time', function () {
+    $this->http->addResponse(acmeFixture('projects'));
+
+    $this->acme->projects()->list(ProjectStatus::Archived, page: 2);
+
+    expect((string) $this->http->getLastRequest()->getUri())
+        ->toBe('https://api.acme.test/v1/projects?status=archived&page=2');
+});
+
+it('leaves out the filters a Consumer did not give', function () {
+    $this->http->addResponse(acmeFixture('projects'));
+
+    $this->acme->projects()->list(page: 3);
+
+    expect((string) $this->http->getLastRequest()->getUri())
+        ->toBe('https://api.acme.test/v1/projects?page=3');
+});
+
 it('gets one project', function () {
     $this->http->addResponse(acmeFixture('project'));
 

@@ -58,6 +58,10 @@ _Avoid_: DTO, model, entity
 The wrapper an API puts around the data it returns, often alongside metadata about it.
 _Avoid_: Wrapper, container
 
+**Query**:
+The parameters a Request sends in the URI's query string: its Filters, sorting, pagination, includes and the like. Never part of the Request's path.
+_Avoid_: Query string (for the parameters rather than their encoding), params
+
 **Filter**:
-A criterion that narrows which records the API returns. Sorting, includes and field selection are not Filters.
+A criterion that narrows which records the API returns, usually sent in the Query. Sorting, includes and field selection are not Filters.
 _Avoid_: Query param, where clause, constraint

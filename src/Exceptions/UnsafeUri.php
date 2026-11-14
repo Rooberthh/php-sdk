@@ -29,7 +29,7 @@ final class UnsafeUri extends InvalidArgumentException
 
     public static function pathHasQueryOrFragment(string $path): self
     {
-        return new self("A request path can't carry a query or fragment; pass the query separately: [{$path}].");
+        return new self("A request path can't carry a query or fragment; return it from HasQuery::query() instead: [{$path}].");
     }
 
     public static function pathNotRelative(string $path): self

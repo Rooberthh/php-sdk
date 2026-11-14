@@ -12,6 +12,7 @@ use Rooberthh\Sdk\Contracts\BodyContract;
 use Rooberthh\Sdk\Http\Body\FormBody;
 use Rooberthh\Sdk\Http\Body\JsonBody;
 use Rooberthh\Sdk\Contracts\HasBody;
+use Rooberthh\Sdk\Contracts\HasQuery;
 use Rooberthh\Sdk\Contracts\RequestContract;
 
 /**
@@ -50,6 +51,45 @@ function requestWithBody(BodyContract $body): RequestContract
     };
 }
 
+/**
+ * A GET to `emails` that sends the given Query.
+ *
+ * @param array<string, null|bool|float|int|list<null|bool|float|int|string>|string> $query
+ *
+ * @return RequestContract<ResponseInterface>
+ */
+function requestWithQuery(array $query): RequestContract
+{
+    return new readonly class ($query) implements HasQuery, RequestContract {
+        /**
+         * @param array<string, null|bool|float|int|list<null|bool|float|int|string>|string> $query
+         */
+        public function __construct(
+            private array $query,
+        ) {}
+
+        public function method(): Method
+        {
+            return Method::GET;
+        }
+
+        public function path(): string
+        {
+            return 'emails';
+        }
+
+        public function query(): array
+        {
+            return $this->query;
+        }
+
+        public function result(ResponseInterface $response): ResponseInterface
+        {
+            return $response;
+        }
+    };
+}
+
 beforeEach(function () {
     $this->http = mockHttp();
     $this->connector = new Connector('https://api.example.com/v2', new Bearer('connector-token'), http: $this->http);
@@ -65,6 +105,36 @@ it('sends the Request method to its path under the base URI, with no body', func
     expect($sent->getMethod())->toBe('PUT')
         ->and((string) $sent->getUri())->toBe('https://api.example.com/v2/emails/1')
         ->and((string) $sent->getBody())->toBe('');
+});
+
+it('sends the Query of a Request that has one', function () {
+    $this->http->addResponse(new Response(200));
+
+    $this->connector->send(requestWithQuery(['status' => 'sent', 'page' => 2]));
+
+    expect((string) $this->http->getLastRequest()->getUri())
+        ->toBe('https://api.example.com/v2/emails?status=sent&page=2');
+});
+
+it('sends no query string when every Query value is null', function () {
+    $this->http->addResponse(new Response(200));
+
+    $this->connector->send(requestWithQuery(['status' => null]));
+
+    expect((string) $this->http->getLastRequest()->getUri())->toBe('https://api.example.com/v2/emails');
+});
+
+it('keeps a Query value that looks like a path or fragment inside the query', function () {
+    $this->http->addResponse(new Response(200));
+
+    $this->connector->send(requestWithQuery(['next' => '../../admin#x', 'host' => '//evil.example.com']));
+
+    $uri = $this->http->getLastRequest()->getUri();
+
+    expect($uri->getHost())->toBe('api.example.com')
+        ->and($uri->getPath())->toBe('/v2/emails')
+        ->and($uri->getFragment())->toBe('')
+        ->and($uri->getQuery())->toBe('next=..%2F..%2Fadmin%23x&host=%2F%2Fevil.example.com');
 });
 
 it('sends the Body of a Request that has one, with its Content-Type', function () {

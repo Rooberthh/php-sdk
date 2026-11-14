@@ -17,8 +17,10 @@ use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 use Rooberthh\Sdk\Contracts\HasBody;
+use Rooberthh\Sdk\Contracts\HasQuery;
 use Rooberthh\Sdk\Contracts\RequestContract;
 use Rooberthh\Sdk\Http\BaseUri;
+use Rooberthh\Sdk\Http\Query;
 
 class Connector
 {
@@ -98,6 +100,7 @@ class Connector
      * @param RequestContract<T> $request
      *
      * @throws Exceptions\UnsafeUri when the Request's path would leave the base URI
+     * @throws Exceptions\InvalidQuery when the Request's Query can't be encoded
      * @throws ClientExceptionInterface when the Transport can't send it
      *
      * @return T
@@ -117,6 +120,7 @@ class Connector
      * @param RequestContract<mixed> $request
      *
      * @throws Exceptions\UnsafeUri when the Request's path would leave the base URI
+     * @throws Exceptions\InvalidQuery when the Request's Query can't be encoded
      * @throws ClientExceptionInterface when the Transport can't send it
      */
     public function raw(RequestContract $request): ResponseInterface
@@ -137,20 +141,25 @@ class Connector
 
     /**
      * The PSR-7 request a Request describes, before authentication and plugins.
-     * It carries a body, and the Body's Content-Type, only when the Request
-     * implements {@see HasBody}. The Content-Type is set on the request itself,
-     * so a Connector or Consumer header of the same name can't contradict it.
+     * It carries a query only when the Request implements {@see HasQuery}, and
+     * a body, with the Body's Content-Type, only when it implements
+     * {@see HasBody}. The Content-Type is set on the request itself, so a
+     * Connector or Consumer header of the same name can't contradict it.
      *
      * @param RequestContract<mixed> $request
      *
      * @throws Exceptions\UnsafeUri when the path would leave the base URI
+     * @throws Exceptions\InvalidQuery when the Query can't be encoded
      */
     private function toPsr(RequestContract $request): RequestInterface
     {
-        $psr = $this->requestFactory->createRequest(
-            $request->method()->value,
-            $this->baseUri->resolve($request->path())->toString(),
-        );
+        $uri = $this->baseUri->resolve($request->path());
+
+        if ($request instanceof HasQuery && !($query = new Query($request->query()))->isEmpty()) {
+            $uri = $uri->withQuery($query->toString());
+        }
+
+        $psr = $this->requestFactory->createRequest($request->method()->value, $uri->toString());
 
         if (!$request instanceof HasBody) {
             return $psr;

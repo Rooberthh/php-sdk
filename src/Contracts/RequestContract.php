@@ -25,9 +25,10 @@ interface RequestContract
     public function method(): Method;
 
     /**
-     * Relative to the Connector's base URI, so it can't carry a query or leave
-     * the base ({@see BaseUri::resolve()}). Values taken from input must be
-     * encoded by the Request, e.g. `'projects/' . rawurlencode($this->id)`.
+     * Relative to the Connector's base URI, so it can't leave the base
+     * ({@see BaseUri::resolve()}) or carry a query; a Request with one
+     * implements {@see HasQuery}. Values taken from input must be encoded by
+     * the Request, e.g. `'projects/' . rawurlencode($this->id)`.
      */
     public function path(): string;
 

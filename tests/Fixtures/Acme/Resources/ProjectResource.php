@@ -7,6 +7,7 @@ namespace Rooberthh\Sdk\Tests\Fixtures\Acme\Resources;
 use Rooberthh\Sdk\Http\File;
 use Rooberthh\Sdk\Tests\Fixtures\Acme\AcmeConnector;
 use Rooberthh\Sdk\Tests\Fixtures\Acme\DataObjects\Project;
+use Rooberthh\Sdk\Tests\Fixtures\Acme\Enums\ProjectStatus;
 use Rooberthh\Sdk\Tests\Fixtures\Acme\Payloads\CreateProjectPayload;
 use Rooberthh\Sdk\Tests\Fixtures\Acme\Requests\Projects\CreateProject;
 use Rooberthh\Sdk\Tests\Fixtures\Acme\Requests\Projects\DeleteProject;
@@ -25,11 +26,14 @@ final readonly class ProjectResource
     ) {}
 
     /**
+     * @param ?ProjectStatus $status only projects with this status
+     * @param ?int           $page
+     *
      * @return list<Project>
      */
-    public function list(): array
+    public function list(?ProjectStatus $status = null, ?int $page = null): array
     {
-        return $this->acme->send(new ListProjects());
+        return $this->acme->send(new ListProjects($status, $page));
     }
 
     /**
