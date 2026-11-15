@@ -2,11 +2,11 @@
 
 ### Issue tracker
 
-Issues live in GitHub Issues for Rooberthh/php-sdk (via `gh`). See `docs/agents/issue-tracker.md`.
+Issues live in GitHub Issues for Rooberthh/php-sdk (via `gh`). See `~/code/home/docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
-Default vocabulary: needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix. See `docs/agents/triage-labels.md`.
+Default vocabulary: needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix. See `~/code/home/docs/agents/triage-labels.md`.
 
 ### Domain docs
 
