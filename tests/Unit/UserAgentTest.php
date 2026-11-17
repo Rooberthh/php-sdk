@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Rooberthh\Sdk\Connector;
 
 it('sends php-sdk and PHP versions as the default User-Agent', function (): void {
-    $connector = new class ('https://api.example.com') extends Connector {
+    $connector = new class ('https://api.example.com', http: mockHttp()) extends Connector {
         /** @return array<string, string> */
         public function headers(): array
         {
@@ -18,7 +18,7 @@ it('sends php-sdk and PHP versions as the default User-Agent', function (): void
 });
 
 it('lets an SDK Author put their own SDK in front', function (): void {
-    $connector = new class ('https://api.example.com') extends Connector {
+    $connector = new class ('https://api.example.com', http: mockHttp()) extends Connector {
         /** @return array<string, string> */
         public function headers(): array
         {
