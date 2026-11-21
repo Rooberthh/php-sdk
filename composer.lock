@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "64efa8cb8e3aeb1af3e8437e8d8ecd8d",
+    "content-hash": "fb4b107e94a88d9268f33027272a1333",
     "packages": [
         {
             "name": "clue/stream-filter",
@@ -771,55 +771,6 @@
                 "source": "https://github.com/php-fig/http-message/tree/2.0"
             },
             "time": "2023-04-04T09:54:51+00:00"
-        },
-        {
-            "name": "rooberthh/php-http-tools",
-            "version": "0.1.2",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/Rooberthh/php-http-tools.git",
-                "reference": "d2cbdd751df48c67e2a4d8b178a2b36bb78f2147"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/Rooberthh/php-http-tools/zipball/d2cbdd751df48c67e2a4d8b178a2b36bb78f2147",
-                "reference": "d2cbdd751df48c67e2a4d8b178a2b36bb78f2147",
-                "shasum": ""
-            },
-            "require": {
-                "php": "^8.3"
-            },
-            "require-dev": {
-                "laravel/pint": "^1.13.7",
-                "phpstan/phpstan": "^1.10.50",
-                "roave/security-advisories": "dev-latest"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "Rooberthh\\HttpTools\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Roberth Evaldsson",
-                    "email": "evaldsson.roberth@gmail.com",
-                    "role": "Developer"
-                }
-            ],
-            "description": "Basic Enums for HTTP methods and status codes.",
-            "keywords": [
-                "php"
-            ],
-            "support": {
-                "issues": "https://github.com/rooberthh/php-http-tools/issues",
-                "source": "https://github.com/Rooberthh/php-http-tools/tree/0.1.2"
-            },
-            "time": "2026-09-26T05:09:47+00:00"
         },
         {
             "name": "symfony/deprecation-contracts",

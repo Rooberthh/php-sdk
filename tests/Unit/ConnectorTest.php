@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Http\Message\Authentication\Bearer;
 use Nyholm\Psr7\Response;
 use Psr\Http\Message\ResponseInterface;
-use Rooberthh\HttpTools\Enums\Method;
+use Rooberthh\Sdk\Http\Method;
 use Rooberthh\Sdk\Connector;
 use Rooberthh\Sdk\Exceptions\UnsafeUri;
 use Rooberthh\Sdk\Contracts\BodyContract;
