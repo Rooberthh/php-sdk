@@ -1,0 +1,2 @@
+- `composer lint` rewrites files: Rector, then Pint, then PHPStan. Run it to fix what the checks report, keep the changes it makes and don't hand-revert them. The checks themselves only report.
+- Tests are Pest (`vendor/bin/pest`); there is no `composer test` script.

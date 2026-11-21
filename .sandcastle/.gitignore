@@ -1,4 +1,4 @@
 .env
 logs/
 worktrees/
-node_modules/
+patches/

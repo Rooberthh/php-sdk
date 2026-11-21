@@ -1,0 +1,10 @@
+{
+  "imageName": "sandcastle:php-sdk",
+  "copyToWorktree": ["vendor"],
+  "checks": [
+    "composer rector:check",
+    "vendor/bin/pint --test",
+    "composer stan",
+    "vendor/bin/pest"
+  ]
+}
