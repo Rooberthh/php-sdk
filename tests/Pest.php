@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Http\Client\Exception\TransferException;
 use Http\Mock\Client as MockClient;
 use Psr\Http\Message\ResponseInterface;
-use Rooberthh\HttpTools\Enums\Method;
+use Rooberthh\Sdk\Http\Method;
 use Rooberthh\Sdk\Contracts\RequestContract;
 
 /**

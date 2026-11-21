@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Rooberthh\Sdk\Tests\Fixtures\Acme\Requests\Projects;
 
 use Psr\Http\Message\ResponseInterface;
-use Rooberthh\HttpTools\Enums\Method;
+use Rooberthh\Sdk\Http\Method;
 use Rooberthh\Sdk\Contracts\HasBody;
 use Rooberthh\Sdk\Contracts\BodyContract;
 use Rooberthh\Sdk\Http\Body\JsonBody;

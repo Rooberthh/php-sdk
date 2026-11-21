@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Rooberthh\Sdk\Contracts;
 
 use Psr\Http\Message\ResponseInterface;
-use Rooberthh\HttpTools\Enums\Method;
+use Rooberthh\Sdk\Http\Method;
 use Rooberthh\Sdk\Connector;
 use Rooberthh\Sdk\Http\BaseUri;
 
